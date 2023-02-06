@@ -43,6 +43,11 @@ class SWV:
         self.square_waveform = square(2 * np.pi * self.f * self.step_time, duty = 0.5) * self.dEp
         self.combined = self.step_waveform + self.square_waveform
 
+        '''INPUT POTENTIALS FOR SIMULATION'''
+        self.E = np.array([])
+        for ix in range(self.sweep_waveform.size):
+            self.E = np.append(self.E, self.sweep_waveform[ix] + self.dEp)
+            self.E = np.append(self.E, self.sweep_waveform[ix] - self.dEp)
 
 
 
