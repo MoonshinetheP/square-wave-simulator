@@ -2,20 +2,32 @@ import numpy as np
 import os
 from errno import EEXIST
 
-import waveform
+import waveforms as wf
 
-class Conversion:
-    """Converts the inputs of an electrochemical simulation into dimensionless equivalents"""
+class E:
 
     def __init__(self):
         pass
 
-class Deconversion:
-    """Converts the outputs of an electrochemical simulation into quantities with dimensionality"""
-    
+class EC:
+
     def __init__(self):
         pass
 
+class CE:
+
+    def __init__(self):
+        pass
+
+class ECP:
+
+    def __init__(self):
+        pass
+
+class ECE:
+
+    def __init__(self):
+        pass
 
 class EEC:
     """Simulation"""
@@ -88,23 +100,41 @@ class EEC:
             if self.t[k] > self.ts:
                 for i in range(1, self.n - 1):
                     self.delt = self.t[k] - self.t[k-1]
-                    self.alpha[i] = -(2 * self.delt) / (self.delx[i - 1] * (self.delx[i - 1] + self.delx[i]))
-                    self.gamma[i] = -(2 * self.delt) / (self.delx[i] * (self.delx[i - 1] + self.delx[i]))
-                    self.beta[i] = 1 - self.alpha[i] - self.gamma[i]
-            
-                self.gmod[0] = 0
+                    self.alpha_A[i] = -(2 * self.delt) / (self.delx[i - 1] * (self.delx[i - 1] + self.delx[i]))
+                    self.gamma_A[i] = -(2 * self.delt) / (self.delx[i] * (self.delx[i - 1] + self.delx[i]))
+                    self.beta_A[i] = 1 - self.alpha[i] - self.gamma[i]
+
+                    self.alpha_AP[i] = -(2 * self.delt) / (self.delx[i - 1] * (self.delx[i - 1] + self.delx[i]))
+                    self.gamma_AP[i] = -(2 * self.delt) / (self.delx[i] * (self.delx[i - 1] + self.delx[i]))
+                    self.beta_AP[i] = 1 - self.alpha[i] - self.gamma[i]
+
+                    self.alpha_B[i] = -(2 * self.delt) / (self.delx[i - 1] * (self.delx[i - 1] + self.delx[i]))
+                    self.gamma_B[i] = -(2 * self.delt) / (self.delx[i] * (self.delx[i - 1] + self.delx[i]))
+                    self.beta_B[i] = 1 - self.alpha[i] - self.gamma[i]
+
+                    self.alpha_C[i] = -(2 * self.delt) / (self.delx[i - 1] * (self.delx[i - 1] + self.delx[i]))
+                    self.gamma_C[i] = -(2 * self.delt) / (self.delx[i] * (self.delx[i - 1] + self.delx[i]))
+                    self.beta_C[i] = 1 - self.alpha[i] - self.gamma[i]
+
+                    self.alpha_D[i] = -(2 * self.delt) / (self.delx[i - 1] * (self.delx[i - 1] + self.delx[i]))
+                    self.gamma_D[i] = -(2 * self.delt) / (self.delx[i] * (self.delx[i - 1] + self.delx[i]))
+                    self.beta_D[i] = 1 - self.alpha[i] - self.gamma[i]
+                    
+            #forward sweep
+                self.gmod[0] = 0 # probably will change with new boundary condition
                 for i in range(1, self.n - 1):
                     self.gmod[i] = self.gamma[i] / (self.beta[i] - self.gmod[i - 1] * self.alpha[i])
                 
-            self.dmod[0] = 1 / (1 + np.exp(-self.theta))
+            self.dmod[0] = 1 / (1 + np.exp(-self.theta)) #This is the boundary condition
             for i in range(1, self.n - 1):
                 self.dmod[i] = (self.delta[i] - self.dmod[i - 1] * self.alpha[i]) / (self.beta[i] - self.gmod[i - 1] * self.alpha[i])
 
-            self.C[self.n - 1] = 1
+            #back sweep
+            self.C[self.n - 1] = 1 #This is the other boundary condition
             for i in range(self.n - 2, -1, -1):
                 self.C[i] = self.dmod[i] - self.gmod[i] * self.C[i + 1]
 
-                self.delta[i] = self.C[i]
+                self.delta[i] = self.C[i] # maybe this has a part about chemical reaction
 
             self.time = np.append(self.time, self.t[k])
             self.flux = np.append(self.flux, -(self.C[1] - self.C[0]) / (self.x[1] - self.x[0]))
@@ -137,6 +167,8 @@ if __name__ == '__main__':
             raise
     filepath = cwd + '/data/' + 'test.txt'
 
+
+    
     instance = EEC(theta = -15)
 
     with open(filepath, 'w') as file:
