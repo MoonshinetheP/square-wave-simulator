@@ -277,7 +277,7 @@ class CV(sweep):
         if self.Eini == self.Elow:                
             self.window = self.Eupp - self.Elow
             self.dp = int(self.window / self.dE)
-            self.tmax = (2 * self.window) / self.sr
+            self.tmax = (2 * self.ns * self.window) / self.sr
             self.dt = self.dE / self.sr
 
             '''INDEX'''
@@ -296,7 +296,7 @@ class CV(sweep):
         if self.Eini == self.Eupp:     
             self.window = self.Eupp - self.Elow
             self.dp = int(self.window / np.abs(self.dE))
-            self.tmax = (2 * self.window) / self.sr
+            self.tmax = (2 * self.ns * self.window) / self.sr
             self.dt = np.abs(self.dE) / self.sr
 
             '''INDEX'''
