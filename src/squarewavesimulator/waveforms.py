@@ -1,4 +1,6 @@
 import sys
+import os
+from errno import EEXIST
 import numpy as np
 from scipy.signal import square
 
@@ -64,6 +66,9 @@ class sweep:
             print('\n' + 'Number of scans must be a positive non-zero value' + '\n')
             sys.exit()
 
+    def output(self):
+        zipped = zip(self.index, self.t, self.E)
+        return zipped
             
 class step:
     '''Parent class for all step type waveforms'''
@@ -233,14 +238,15 @@ class LSV(sweep):
         '''STARTING FROM LOWER VERTEX POTENTIAL''' 
         if self.Eini == self.Elow:                 
             self.window = self.Eupp - self.Elow
-            self.dp = self.window / self.dE
+            self.dp = int(self.window / self.dE)
             self.tmax = self.window / self.sr
+            self.dt = self.dE / self.sr
         
             '''INDEX'''
-            self.index = np.arange(0, (1000 * self.tmax), (self.tmax/self.dp))
+            self.index = np.arange(0, ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
         
             '''TIME'''
-            self.t = self.index / 1000
+            self.t = self.index * self.dt
             
             '''POTENTIAL'''
             self.E = np.linspace(self.Eini, self.Eupp, self.dp + 1, endpoint = True, dtype = np.float32)
@@ -248,14 +254,15 @@ class LSV(sweep):
         '''STARTING FROM UPPER VERTEX POTENTIAL''' 
         if self.Eini == self.Eupp:                 
             self.window = self.Eupp - self.Elow
-            self.dp = self.window / self.dE
+            self.dp = int(self.window / np.abs(self.dE))
             self.tmax = self.window / self.sr
+            self.dt = np.abs(self.dE) / self.sr
         
             '''INDEX'''
-            self.index = np.arange(0, (1000 * self.tmax), (self.tmax/self.dp))
+            self.index = np.arange(0, ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
         
             '''TIME'''
-            self.t = self.index / 1000
+            self.t = self.index * self.dt
             
             '''POTENTIAL'''
             self.E = np.linspace(self.Eini, self.Elow, self.dp + 1, endpoint = True, dtype = np.float32)
@@ -267,17 +274,17 @@ class CV(sweep):
         super().__init__(Eini, Eupp, Elow, dE, sr, ns)
 
         '''STARTING FROM LOWER VERTEX POTENTIAL''' 
-        if self.Eini == self.Elow:          
-            self.segments = 2 * self.ns        
+        if self.Eini == self.Elow:                
             self.window = self.Eupp - self.Elow
-            self.dp = (2 * self.window) / self.dE
+            self.dp = int(self.window / self.dE)
             self.tmax = (2 * self.window) / self.sr
+            self.dt = self.dE / self.sr
 
             '''INDEX'''
-            self.index = np.arange(0, (1000 * self.segments * self.T), (self.T/self.dp))
+            self.index = np.arange(0, ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
         
             '''TIME'''
-            self.t = self.index / 1000
+            self.t = self.index * self.dt
             
             '''POTENTIAL'''
             self.E = np.array([self.Eini])
@@ -286,41 +293,41 @@ class CV(sweep):
                 self.E = np.append(self.E, np.linspace(self.Eupp - self.dE, self.Eini, self.dp, endpoint = True, dtype = np.float32))
 
         '''STARTING FROM UPPER VERTEX POTENTIAL'''
-        if self.Eini == self.Eupp:
-            self.segments = 2 * self.ns        
+        if self.Eini == self.Eupp:     
             self.window = self.Eupp - self.Elow
-            self.dp = (2 * self.window) / self.dE
+            self.dp = int(self.window / np.abs(self.dE))
             self.tmax = (2 * self.window) / self.sr
+            self.dt = np.abs(self.dE) / self.sr
 
             '''INDEX'''
-            self.index = np.arange(0, (1000 * self.segments * self.T), (self.T/self.dp))
+            self.index = np.arange(0, ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
         
             '''TIME'''
-            self.t = self.index / 1000
+            self.t = self.index * self.dt
             
             '''POTENTIAL'''
             self.E = np.array([self.Eini])
             for ix in range(0, self.ns):
-                self.E = np.append(self.E, np.linspace(self.Eini - self.dE, self.Elow, self.dp, endpoint = True, dtype = np.float32))
-                self.E = np.append(self.E, np.linspace(self.Elow + self.dE, self.Eini, self.dp, endpoint = True, dtype = np.float32))
+                self.E = np.append(self.E, np.linspace(self.Eini + self.dE, self.Elow, self.dp, endpoint = True, dtype = np.float32))
+                self.E = np.append(self.E, np.linspace(self.Elow - self.dE, self.Eini, self.dp, endpoint = True, dtype = np.float32))
 
 
         '''STARTING IN BETWEEN VERTEX POTENTIALS'''
-        if self.Elow < self.Eini < self.Eupp:
-            self.segments = 3 * self.ns         
+        if self.Elow < self.Eini < self.Eupp:        
             self.uppwindow = self.Eupp - self.Eini
             self.window = self.Eupp - self.Elow
             self.lowwindow = self.Eini - self.Elow
-            self.uppdp = self.uppwindow / self.dE
-            self.dp = self.window / self.dE
-            self.lowdp = self.lowwindow / self.dE
-            self.tmax = (self.uppwindown + self.window + self.lowwindow) / self.sr
+            self.uppdp = int(self.uppwindow / self.dE)
+            self.dp = int(self.window / self.dE)
+            self.lowdp = int(self.lowwindow / self.dE)
+            self.tmax = self.ns * (self.uppwindow + self.window + self.lowwindow) / self.sr
+            self.dt = self.dE / self.sr
 
             '''INDEX'''
-            self.index = np.arange(0, (1000 * self.segments * self.tmax), (self.tmax/self.dp))
+            self.index = np.arange(0, ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
         
             '''TIME'''
-            self.t = self.index / 1000
+            self.t = self.index * self.dt
             
             '''POTENTIAL WITH POSITIVE SCAN DIRECTION'''
             if dE > 0:
@@ -418,8 +425,20 @@ class SWV(step):
 
 if __name__ == '__main__':
     
-    instance = CV(Eini = 0, Eupp = 'a', Elow = -0.5, sr = 0.1, ns = 1)
-    data = 'C:/Users/SLinf/Documents/data.txt'
-    '''with open(data, 'w') as file:
-        for ix in instance.combined:
-            file.write(str(ix) + '\n')'''
+        
+    cwd = os.getcwd()
+
+    try:
+        os.makedirs(cwd + '/data')
+    except OSError as exc:
+        if exc.errno == EEXIST and os.path.isdir(cwd + '/data'):
+            pass
+        else: 
+            raise
+    filepath = cwd + '/data/' + 'waveform.txt'
+
+    wf = LSV(Eini = 0.5, Eupp = 0.5, Elow = 0, dE = -0.001, sr = 0.1, ns = 1)
+
+    with open(filepath, 'w') as file:
+        for ix, iy, iz in wf.output():
+            file.write(str(ix) + ',' + str(iy) + ',' + str(iz) + '\n')
