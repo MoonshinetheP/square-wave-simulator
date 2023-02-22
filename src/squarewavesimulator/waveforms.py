@@ -10,12 +10,12 @@ from scipy.signal import square
 class sweep:
     '''Parent class for all sweep type waveforms'''
     def __init__(self, Eini, Eupp, Elow, dE, sr, ns):
-        self.Eini = Eini
-        self.Eupp = Eupp
-        self.Elow = Elow
-        self.dE = dE
-        self.sr = sr
-        self.ns = ns
+        self.Eini = Eini        # Start potential
+        self.Eupp = Eupp        # Upper vertex potential
+        self.Elow = Elow        # Lower vertex potential
+        self.dE = dE            # Step size (i.e. the number of data points)
+        self.sr = sr            # Scan rate
+        self.ns = ns            # Number of scans for cyclic voltammetry
 
         '''DATATYPE ERRORS'''
         if isinstance(self.Eini, (float, int)) is False:
@@ -67,51 +67,67 @@ class sweep:
             sys.exit()
 
     def output(self):
+        '''Function that returns the waveform for checking or data processing purposes'''
         zipped = zip(self.index, self.t, self.E)
         return zipped
             
 class step:
     '''Parent class for all step type waveforms'''
-    def __init__(self, Eini, Eupp, Elow, dE, sp, sr, ns):
-        self.Eini = Eini
-        self.Eupp = Eupp
-        self.Elow = Elow
-        self.dE = dE
-        self.sp = sp
-        self.sr = sr
-        self.ns = ns
+    def __init__(self, E = 0, E1 = 0, E2 = 0, dt = 0.1, Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, sp = 1000, ns = 1):
+        self.E = E              # Potential for single step chronoamperommetry
+        self.E1 = E1            # First potential for double step chronoamperommetry
+        self.E2 = E2            # Second potential for double step chronoamperommetry
+        self.dt = dt            # Step period
+        self.Eini = Eini        # Start potential for sweeping step techniques
+        self.Eupp = Eupp        # Upper vertex potential for sweeping step techniques
+        self.Elow = Elow        # Lower vertex potential for sweeping step techniques
+        self.dE = dE            # Step size for sweeping step techniques
+        self.sr = sr            # Scan rate for sweeping step techniques
+        self.sp = sp            # Sample points in a step
+        self.ns = ns            # Number of scans for cyclic staircase voltammetry
 
         '''DATATYPE ERRORS'''
+        if isinstance(self.E, (float, int)) is False:
+            print('\n' + 'An invalid datatype was used for the potential. Enter either a float or an integer value corresponding to a potential in V.' + '\n')
+            sys.exit()
+        if isinstance(self.E1, (float, int)) is False:
+            print('\n' + 'An invalid datatype was used for the 1st potential. Enter either a float or an integer value corresponding to a potential in V.' + '\n')
+            sys.exit()        
+        if isinstance(self.E2, (float, int)) is False:
+            print('\n' + 'An invalid datatype was used for the 2nd potential. Enter either a float or an integer value corresponding to a potential in V.' + '\n')
+            sys.exit()
+        if isinstance(self.dt, (float, int)) is False:
+            print('\n' + 'An invalid datatype was used for the step time. Enter either a float or an integer value corresponding to a time in s.' + '\n')
+            sys.exit()        
         if isinstance(self.Eini, (float, int)) is False:
-            print('\n' + 'An invalid datatype was used for the start potential. Enter either a float or an integer.' + '\n')
+            print('\n' + 'An invalid datatype was used for the start potential. Enter either a float or an integer value corresponding to a potential in V.' + '\n')
             sys.exit()
         if isinstance(self.Eupp, (float, int)) is False:
-            print('\n' + 'An invalid datatype was used for the upper vertex potential. Enter either a float or an integer.' + '\n')
+            print('\n' + 'An invalid datatype was used for the upper vertex potential. Enter either a float or an integer value corresponding to a potential in V.' + '\n')
             sys.exit()        
         if isinstance(self.Elow, (float, int)) is False:
-            print('\n' + 'An invalid datatype was used for the lower vertex potential. Enter either a float or an integer.' + '\n')
-            sys.exit()        
-        if isinstance(self.dE, (float, int)) is False:
-            print('\n' + 'An invalid datatype was used for the step potential. Enter either a float or an integer.' + '\n')
-            sys.exit()
+            print('\n' + 'An invalid datatype was used for the lower vertex potential. Enter either a float or an integer value corresponding to a potential in V.' + '\n')
+            sys.exit()      
+        if isinstance(self.dE, (float)) is False:
+            print('\n' + 'An invalid datatype was used for the step potential. Enter a float value corresponding to a potential in V.' + '\n')
+            sys.exit()    
         if isinstance(self.sr, (float, int)) is False:
-            print('\n' + 'An invalid datatype was used for the scan rate. Enter either a float or an integer.' + '\n')
+            print('\n' + 'An invalid datatype was used for the scan rate. Enter a float or an integer value corresponding to the scan rate in V/s.' + '\n')
+            sys.exit() 
+        if isinstance(self.sp, (int)) is False:
+            print('\n' + 'An invalid datatype was used for the number of data points in a step. Enter an integer value.' + '\n')
             sys.exit()
         if isinstance(self.ns, (int)) is False:
-            print('\n' + 'An invalid datatype was used for the number of scans. Enter an integer.' + '\n')
-            sys.exit()
-        if isinstance(self.Cd, (float, int)) is False:
-            print('\n' + 'An invalid datatype was used for the double layer capacitance. Enter either a float or an integer.' + '\n')
-            sys.exit()
-        if isinstance(self.Ru, (float, int)) is False:
-            print('\n' + 'An invalid datatype was used for the uncompensated resistance. Enter either a float or an integer.' + '\n')
-            sys.exit()
-        if isinstance(self.sp, (int)) is False:
-            print('\n' + 'An invalid datatype was used for the number of data points in a step. Enter an integer.' + '\n')
-            sys.exit()
-
+            print('\n' + 'An invalid datatype was used for the number of scans. Enter an integer value corresponding to the scan rate in V/s.' + '\n')
+            sys.exit() 
 
         '''DATA VALUE ERRORS'''
+        if self.E1 == self.E2:
+            print('\n' + 'First and second potentials must be different values' + '\n')
+            sys.exit()  
+        if self.dt <= 0:
+            print('\n' + 'Step time must be a positive non-zero value' + '\n')
+            sys.exit()    
         if self.Eupp == self.Elow:
             print('\n' + 'Upper and lower vertex potentials must be different values' + '\n')
             sys.exit()
@@ -136,100 +152,24 @@ class step:
         if self.sr <= 0:
             print('\n' + 'Scan rate must be a positive non-zero value' + '\n')
             sys.exit()
+        if self.sp <= 0:
+            print('\n' + 'Number of data points in a step must be a positive non-zero value' + '\n')
+            sys.exit()        
         if self.ns <=0:
             print('\n' + 'Number of scans must be a positive non-zero value' + '\n')
             sys.exit()
-        if self.Cd <= 0:
-            print('\n' + 'Double layer capacitance must be a positive non-zero value' + '\n')
-            sys.exit()
-        if self.Ru <= 0:
-            print('\n' + 'Uncompensated resistance must be a positive non-zero value' + '\n')
-            sys.exit()
-        if self.sp <= 0:
-            print('\n' + 'Number of data points in a step must be a positive non-zero value' + '\n')
-            sys.exit()
-
-
-        '''WAVEFORM GENERATION'''        
-        if self.Eini == self.Elow:          
-            self.segments = 2 * self.ns          # Number of segments expected          
-            self.window = self.Eupp - self.Elow         # Potential window of each segment
-            self.dp = int(self.window/self.dE)       # Number of data points in each potential window
-            
-            self.index = np.arange(0, (1000 * self.segments * self.window / self.sr), (1000))
-
-            self.sweeptime = np.array([0])
-            for iw in range(1, self.segments + 1):
-                self.sweeptime = np.append(self.sweeptime, np.linspace((self.sweeptime[-1] + self.dE/self.sr), (iw*self.window/self.sr), self.dp, endpoint = True, dtype = np.float32))
-            
-            self.sweep = np.array([self.Eini])
-            for ix in range(0, self.ns):
-                self.sweep = np.append(self.sweep, np.linspace(self.Eini + self.dE, self.Eupp, self.dp, endpoint = True, dtype = np.float32))
-                self.sweep = np.append(self.sweep, np.linspace(self.Eupp - self.dE, self.Eini, self.dp, endpoint = True, dtype = np.float32))
-
-            self.steptime = np.array([])
-            for iy in range(0, self.sweeptime.size - 1):
-                self.steptime = np.append(self.steptime, np.linspace(self.sweeptime[iy], self.sweeptime[iy + 1], self.sp, dtype = np.float64))
-
-            self.step = np.array([])
-            for iz in range(0, self.segments * self.dp):
-                self.step = np.append(self.step, np.linspace(self.sweep[iz], self.sweep[iz + 1], self.sp, dtype = np.float64))
-
-
-        if self.Eini == self.Eupp:
-            self.segments = 2 * self.ns          # Number of segments expected          
-            self.window = self.Eupp - self.Elow         # Potential window of each segment
-            self.dp = int(self.window/self.dE)       # Number of data points in each potential window
-            
-            self.sweeptime = np.array([0])
-            for iw in range(1, self.segments + 1):
-                self.sweeptime = np.append(self.sweeptime, np.round(np.linspace((self.sweeptime[-1] + self.dE/self.sr), (iw*self.window/self.sr), self.dp, endpoint = True), decimals = 3))
-            
-            self.sweep = np.array([self.Eini])
-            for ix in range(0, self.ns):
-                self.sweep = np.append(self.sweep, np.round(np.linspace(self.Eini + self.dE, self.Elow, self.dp, endpoint = True), decimals = 4))
-                self.sweep = np.append(self.sweep, np.round(np.linspace(self.Elow - self.dE, self.Eini, self.dp, endpoint = True), decimals = 4))
-
-        
-            self.step = np.array([])
-            for iz in range(0, self.segments * self.dp):
-                try:
-                    self.step = np.append(self.step, np.round(np.linspace(self.sweep[iz], self.sweep[iz + 1] - self.dE/self.sp, self.sp), decimals = 7))
-                except:
-                    self.step = np.append(self.step, np.round(np.linspace(self.sweep[iz], self.sweep[-1], self.sp + 1), decimals = 7))
-
-
-        if self.Elow < self.Eini < self.Eupp:
-            self.segments = 3 * self.ns          # Number of segments expected          
-            self.uppwindow = self.Eupp - self.Eini         # Potential window of each segment
-            self.window = self.Eupp - self.Elow
-            self.lowwindow = self.Eini - self.Elow
-            self.uppdp = int(self.uppwindow/self.dE)
-            self.dp = int(self.window/self.dE)       # Number of data points in each potential window
-            self.lowdp = int(self.lowwindow/self.dE)
-
-            self.time = np.array([])
-            for ix in range(0, self.ns):
-                self.time = np.append(self.time, np.round(np.linspace(0, (self.window - self.dE)/self.sr, self.dp), decimals = 3))
-                self.time = np.append(self.time, np.round(np.linspace(0, (self.window - self.dE)/self.sr, self.dp), decimals = 3))
-                self.time = np.append(self.time, np.round(np.linspace(0, (self.window - self.dE)/self.sr, self.dp), decimals = 3))
-
-            self.sweep = np.array([])
-            for iy in range(0, self.ns):
-                self.sweep = np.append(self.sweep, np.round(np.linspace(self.Eini, self.Eupp - self.dE, self.uppdp), decimals = 4))
-                self.sweep = np.append(self.sweep, np.round(np.linspace(self.Eupp, self.Elow + self.dE, self.dp), decimals = 4))
-                self.sweep = np.append(self.sweep, np.round(np.linspace(self.Elow, self.Eini - self.dE, self.lowdp), decimals = 4))
+    
+    def output(self):
+        '''Function that returns the waveform for checking or data processing purposes'''
+        zipped = zip(self.index, self.t, self.E)
+        return zipped
             
 
 """SWEEP CLASSES"""
 class LSV(sweep):
     '''Waveform for linear sweep voltammetry'''
-    def __init__(self,Eini, Eupp, Elow, dE, sr, ns):
-        super().__init__(Eini, Eupp, Elow, dE, sr, ns)
-
-        if self.ns != 1:
-            print('\n' + 'Number of scans should be 1 for LSV' + '\n')
-            sys.exit()
+    def __init__(self,Eini, Eupp, Elow, dE, sr):
+        super().__init__(Eini, Eupp, Elow, dE, sr)
 
         if self.Elow < self.Eini < self.Eupp:
             print('\n' + 'Initial potential should be equal to either upper vertex or lower vertex potential in LSV' + '\n')
@@ -266,7 +206,6 @@ class LSV(sweep):
             
             '''POTENTIAL'''
             self.E = np.linspace(self.Eini, self.Elow, self.dp + 1, endpoint = True, dtype = np.float32)
-
 
 class CV(sweep):
     '''Waveform for cyclic voltammetry'''
@@ -347,10 +286,27 @@ class CV(sweep):
 
 
 
-
 """STEP CLASSES"""
 class CA(step):
     '''Waveform for chronoamperommetry'''
+    def __init__(self, E, dt, sp):
+        super().__init__(E, dt, sp)
+        self.E = E
+        self.dt = dt
+        self.sp = sp
+
+        '''INDEX'''
+        self.index = np.arange(0, (self.sp + 1), 1, dtype = np.int32)
+        
+        '''TIME'''
+        self.t = (self.index/self.sp) * self.dt
+            
+        '''POTENTIAL'''
+        self.E = np.ones((self.sp + 1)) * self.E
+
+
+class DSCA(step):
+    '''Waveform for double step chronoamperommetry'''
     def __init__(self):
         pass
 
@@ -437,7 +393,7 @@ if __name__ == '__main__':
             raise
     filepath = cwd + '/data/' + 'waveform.txt'
 
-    wf = LSV(Eini = 0.5, Eupp = 0.5, Elow = 0, dE = -0.001, sr = 0.1, ns = 1)
+    wf = CA(E = 0.5, dt = 0, sp = 1000)
 
     with open(filepath, 'w') as file:
         for ix, iy, iz in wf.output():
