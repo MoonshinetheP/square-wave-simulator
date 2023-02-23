@@ -510,8 +510,27 @@ class SWV(pulse):
 
 class NPV(pulse):
     '''Waveform for normal pulse voltammetry'''
-    def __init__(self):
-        pass
+    def __init__(self, Eini, Efin, dEs, dEp, dt, pt, sp):
+        super().__init__(Eini, Efin, dEs, dEp, dt, pt, sp)
+       
+        self.window = np.abs(self.Efin - self.Eini)
+        self.dp = int(self.window / np.abs(self.dEs))
+        self.tmax = self.dp * self.dt
+
+        '''INDEX'''
+        self.index = np.arange(0, ((self.sp * self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
+
+        '''TIME'''
+        self.t = (self.index / self.sp) * self.dt
+
+        '''POTENTIAL'''
+        self.E = np.array([self.Eini])
+        for ix in range(1, self.dp + 1):
+            if ix != self.dp:
+                self.E = np.append(self.E, square(2 * np.pi * (1/self.dt) * self.t[self.sp * (ix):(self.sp * (ix + 1))], duty = self.pt/self.dt) *(0.5 * ix * self.dEs) + (0.5 * ix * self.dEs))
+            else:
+                self.E = np.append(self.E, square(2 * np.pi * (1/self.dt) * self.t[self.sp * (ix - 1):(self.sp * (self.dp))], duty = self.pt/self.dt) *(0.5 * self.dp * self.dEs) + (0.5 * self.dp * self.dEs))
+
 
 """HYBRID CLASSES"""
 class CSV(hybrid):
@@ -605,7 +624,7 @@ if __name__ == '__main__':
             raise
     filepath = cwd + '/data/' + 'waveform.txt'
 
-    wf = SWV(Eini = 0, Efin = 0.5, dEs = 0.002, dEp = 0.02, dt = 0.01, pt = 0.005, sp = 1000)
+    wf = NPV(Eini = 0, Efin = 0.5, dEs = 0.002, dEp = -0.02, dt = 0.01, pt = 0.005, sp = 1000)
 
     with open(filepath, 'w') as file:
         for ix, iy, iz in wf.output():
