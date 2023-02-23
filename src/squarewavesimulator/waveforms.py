@@ -138,7 +138,73 @@ class step:
         '''Function that returns the waveform for checking or data processing purposes'''
         zipped = zip(self.index, self.t, self.E)
         return zipped
-            
+
+class pulse:
+    '''Parent class for all pulse type waveforms'''
+    def __init__(self, Eini, Efin, dEs, dEp, dt, pt, sp):
+        self.Eini = Eini        # Start potential for pulsed techniques
+        self.Efin = Efin        # End potential for pulsed techniques
+        self.dEs = dEs          # Step size for pulsed techniques
+        self.dEp = dEp          # Pulse size for pulsed techniques
+        self.dt = dt            # Step period
+        self.pt = pt            # Pulse period
+        self.sp = sp            # Sample points in the step
+               
+        '''DATATYPE ERRORS'''
+        if isinstance(self.Eini, (float, int)) is False:
+            print('\n' + 'An invalid datatype was used for the start potential. Enter either a float or an integer value corresponding to a potential in V.' + '\n')
+            sys.exit()
+        if isinstance(self.Efin, (float, int)) is False:
+            print('\n' + 'An invalid datatype was used for the end potential. Enter either a float or an integer value corresponding to a potential in V.' + '\n')
+            sys.exit()        
+        if isinstance(self.dEs, (float)) is False:
+            print('\n' + 'An invalid datatype was used for the step size. Enter a float value corresponding to a potential in V.' + '\n')
+            sys.exit()
+        if isinstance(self.dEp, (float)) is False:
+            print('\n' + 'An invalid datatype was used for the pulse size. Enter a float value corresponding to a potential in V.' + '\n')
+            sys.exit()
+        if isinstance(self.dt, (float, int)) is False:
+            print('\n' + 'An invalid datatype was used for the step period. Enter either a float or an integer value corresponding to a time in s.' + '\n')
+            sys.exit()
+        if isinstance(self.pt, (float, int)) is False:
+            print('\n' + 'An invalid datatype was used for the pulse period. Enter either a float or an integer value corresponding to a time in s.' + '\n')
+            sys.exit()          
+        if isinstance(self.sp, (int)) is False:
+            print('\n' + 'An invalid datatype was used for the number of data points in the step. Enter an integer value.' + '\n')
+            sys.exit()
+
+        '''DATA VALUE ERRORS'''
+        if self.Eini == self.Efin:
+            print('\n' + 'Start and end potentials must be different values' + '\n')
+            sys.exit()  
+        if self.dEs == 0:
+            print('\n' + 'Step potential must be a non-zero value' + '\n')
+            sys.exit()
+        if self.dEp == 0:
+            print('\n' + 'Pulse potential must be a non-zero value' + '\n')
+            sys.exit()
+        if self.Eini < self.Efin and self.dEs < 0:
+            print('\n' + 'Step potential must be a positive value for a positive scan direction' + '\n')
+            sys.exit()
+        if self.Eini > self.Efin and self.dEs > 0:
+            print('\n' + 'Step potential must be a negative value for a negative scan direction' + '\n')
+            sys.exit()          
+        if self.dt <= 0:
+            print('\n' + 'Step period must be a positive non-zero value' + '\n')
+            sys.exit() 
+        if self.pt <= 0:
+            print('\n' + 'Pulse period must be a positive non-zero value' + '\n')
+            sys.exit()    
+        if self.sp <= 0:
+            print('\n' + 'Number of data points in the step must be a positive non-zero value' + '\n')
+            sys.exit()       
+
+    
+    def output(self):
+        '''Function that returns the waveform for checking or data processing purposes'''
+        zipped = zip(self.index, self.t, self.E)
+        return zipped  
+         
 class hybrid:
     '''Parent class for all waveforms composed of both steps and sweeps'''
     def __init__(self, Eini, Eupp, Elow, dE, sr, sp, ns):
@@ -222,6 +288,7 @@ class hybrid:
         zipped = zip(self.index, self.t, self.E)
         return zipped
     
+
 """SWEEP CLASSES"""
 class LSV(sweep):
     '''Waveform for linear sweep voltammetry'''
@@ -271,7 +338,7 @@ class CV(sweep):
 
         '''STARTING FROM LOWER VERTEX POTENTIAL''' 
         if self.Eini == self.Elow:                
-            self.window = self.Eupp - self.Elow
+            self.window = np.abs(self.Eupp - self.Elow)
             self.dp = int(self.window / self.dE)
             self.tmax = (2 * self.ns * self.window) / self.sr
             self.dt = self.dE / self.sr
@@ -342,7 +409,6 @@ class CV(sweep):
                     self.E = np.append(self.E, np.linspace(self.Elow + self.dE, self.Eini, self.uppdp, endpoint = True, dtype = np.float32))
 
 
-
 """STEP CLASSES"""
 class CA(step):
     '''Waveform for chronoamperommetry'''
@@ -364,21 +430,90 @@ class CA(step):
         if self.multiple is True:
             '''INDEX'''
             self.index = np.arange(0, (sum(self.sp) + 1), 1, dtype = np.int32)
-
-            #1000 - 5, 400 - 2, 500- 5
-            '''TIME''' # This doesn't work
+     
+            '''TIME'''
             self.t = np.array([])
             for ix in range(0, len(self.dt)):
                 if ix == 0:
                     self.t = np.append(self.t, (self.index[0:self.sp[ix] + 1])/(self.sp[ix]) * self.dt[ix])
                 else:
-                    self.t = np.append(self.t, (self.index[sum(self.sp[:ix]):sum(self.sp[:ix + 1]) + 1] - sum(self.sp[:ix]))/(sum(self.sp[:ix + 1])) * self.dt[ix])
+                    self.t = np.append(self.t, self.t[-1] + ((self.index[sum(self.sp[:ix]) + 1:sum(self.sp[:ix + 1]) + 1] - self.index[sum(self.sp[:ix])])/self.sp[ix]) * self.dt[ix])
             
             '''POTENTIAL'''
             self.E = np.array(self.dE[0])
             for iy in range(0, len(self.dE)):
-                self.E = np.append(self.E, np.ones(self.sp[iy]) * self.dE[ix])
+                self.E = np.append(self.E, np.ones(self.sp[iy]) * self.dE[iy])
 
+
+"""PULSE CLASSES"""
+class DPV(pulse):
+    '''Waveform for differential pulse voltammetry'''
+    def __init__(self, Eini, Efin, dEs, dEp, dt, pt, sp):
+        super().__init__(Eini, Efin, dEs, dEp, dt, pt, sp)
+
+        if 2 * self.pt == self.dt:
+            print('\n' + 'Wouldn\'t you rather be using square wave voltammetry?' + '\n')
+            sys.exit()       
+
+        self.window = np.abs(self.Efin - self.Eini)
+        self.dp = int(self.window / np.abs(self.dEs))
+        self.tmax = self.dp * self.dt
+
+        '''INDEX'''
+        self.index = np.arange(0, ((self.sp * self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
+
+        '''TIME'''
+        self.t = (self.index / self.sp) * self.dt
+
+        '''POTENTIAL'''
+        self.step = np.array([])
+        for ix in range(0, self.dp):
+            self.step = np.append(self.step, np.ones((self.sp)) * (ix * self.dEs))
+        self.square = square(2 * np.pi * (1/self.dt) * self.t[:-1], duty = self.pt/self.dt) * self.dEp/2 + self.dEp/2
+        
+        self.E = np.array([self.Eini])
+        self.E = np.append(self.E, (self.step + self.square[:-1]))
+
+class SWV(pulse):
+    """Waveform for square wave voltammetry"""
+    def __init__(self, Eini, Efin, dEs, dEp, dt, pt, sp):
+        super().__init__(Eini, Efin, dEs, dEp, dt, pt, sp)
+
+        if 2 * self.pt != self.dt:
+            print('\n' + 'Wouldn\'t you rather be using differential pulse voltammetry?' + '\n')
+            sys.exit()       
+
+        self.window = np.abs(self.Efin - self.Eini)
+        self.dp = int(self.window / np.abs(self.dEs))
+        self.tmax = self.dp * self.dt
+
+        '''INDEX'''
+        self.index = np.arange(0, ((self.sp * self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
+
+        '''TIME'''
+        self.t = (self.index / self.sp) * self.dt
+
+        '''POTENTIAL'''
+        self.step = np.array([])
+        for ix in range(0, self.dp):
+            self.step = np.append(self.step, np.ones((self.sp)) * (ix * self.dEs))
+        self.square = square(2 * np.pi * (1/self.dt) * self.t[:-1], duty = self.pt/self.dt) * self.dEp/2 + self.dEp/2
+        
+        self.E = np.array([self.Eini])
+        self.E = np.append(self.E, (self.step + self.square[:-1]))
+
+        '''INPUT POTENTIALS FOR SIMULATION'''
+        #self.E = np.array([])
+        #for ix in range(self.sweep_waveform.size):
+           #self.E = np.append(self.E, self.sweep_waveform[ix] + self.dEp)
+            #self.E = np.append(self.E, self.sweep_waveform[ix] - self.dEp)
+
+class NPV(pulse):
+    '''Waveform for normal pulse voltammetry'''
+    def __init__(self):
+        pass
+
+"""HYBRID CLASSES"""
 class CSV(hybrid):
     '''Waveform for cyclic staircase voltammetry'''
     def __init__(self, E, E1, E2, dt, Eini, Eupp, Elow, dE, sp, ns):
@@ -455,69 +590,6 @@ class CSV(hybrid):
                     self.E = np.append(self.E, np.linspace(self.Elow + self.dE, self.Elow, self.dp, endpoint = True, dtype = np.float32))
                     self.E = np.append(self.E, np.linspace(self.Elow + self.dE, self.Eini, self.uppdp, endpoint = True, dtype = np.float32))
 
-class NPV(hybrid):
-    '''Waveform for normal pulse voltammetry'''
-    def __init__(self):
-        pass
-
-class DPV(hybrid):
-    '''Waveform for differential pulse voltammetry'''
-    def __init__(self):
-        pass
-
-class RPV(hybrid):
-    '''Waveform for reverse pulse voltammetry'''
-    def __init__(self):
-        pass
-
-class SWV(hybrid):
-    """Waveform for square wave voltammetry"""
-    
-    def __init__(self, Eini = 0, Efin = 1, dEs = 0.002, dEp = 0.05, f = 25, sp = 1000):
-        """Makes an instance of the SWV class and produces sweep, step, and square wave voltammetry waveforms"""
-        
-        '''USER-DEFINED VARIABLES'''
-        self.Eini = Eini                # Initial potential
-        self.Efin = Efin                # Final potential
-        self.dEs = dEs                  # Step potential
-        self.dEp = dEp                  # Pulse amplitude
-        self.f = f                      # Pulse frequency
-        self.sp = sp                    # Data points in a step
-
-        '''DERIVED VARIABLES'''
-        self.window = self.Efin - self.Eini             # Potential window             
-        self.dp = int(self.window / self.dEs)           # Number of steps 
-        self.step_period = 1 / self.f                   # Step interval
-
-        '''TIME INDEX'''
-        self.index = np.arange(0, int(1000 * self.step_period * (self.dp + 1)), int(self.step_period * 1000))
-        
-        '''SWEEP WAVEFORM'''
-        self.sweep_time = self.index / 1000
-        self.sweep_waveform = np.linspace(self.Eini, self.Efin, self.dp + 1, endpoint = True)
-
-        '''STEP WAVEFORM'''
-        self.step_time = np.array([])
-        for ix in range(0, self.index.size):
-            try:
-                self.step_time = np.append(self.step_time, np.arange(self.index[ix], self.index[ix + 1], (1000 * self.step_period / self.sp))/1000)
-            except:
-                self.step_time = np.append(self.step_time, np.arange(self.index[ix], self.index[ix] + self.index[1], (1000 * self.step_period / self.sp))/1000)
-
-        self.step_waveform = np.array([])
-        for iy in range(0, self.sweep_waveform.size):
-            self.step_waveform = np.append(self.step_waveform, np.ones((self.sp)) * self.sweep_waveform[iy])
-
-        '''SQUARE WAVE VOLTAMMETRY WAVEFORM'''
-        self.square_waveform = square(2 * np.pi * self.f * self.step_time, duty = 0.5) * self.dEp
-        self.combined = self.step_waveform + self.square_waveform
-
-        '''INPUT POTENTIALS FOR SIMULATION'''
-        self.E = np.array([])
-        for ix in range(self.sweep_waveform.size):
-            self.E = np.append(self.E, self.sweep_waveform[ix] + self.dEp)
-            self.E = np.append(self.E, self.sweep_waveform[ix] - self.dEp)
-
 
 if __name__ == '__main__':
     
@@ -533,7 +605,7 @@ if __name__ == '__main__':
             raise
     filepath = cwd + '/data/' + 'waveform.txt'
 
-    wf = CA(dE = [0.5, 0.7, -0.2], dt = [5, 2, 5], sp = [1000, 400, 500])
+    wf = SWV(Eini = 0, Efin = 0.5, dEs = 0.002, dEp = 0.02, dt = 0.01, pt = 0.005, sp = 1000)
 
     with open(filepath, 'w') as file:
         for ix, iy, iz in wf.output():
