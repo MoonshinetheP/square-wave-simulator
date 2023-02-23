@@ -217,18 +217,6 @@ class hybrid:
         self.ns = ns            # Number of scans for cyclic staircase voltammetry
 
         '''DATATYPE ERRORS'''
-        if isinstance(self.E, (float, int)) is False:
-            print('\n' + 'An invalid datatype was used for the potential. Enter either a float or an integer value corresponding to a potential in V.' + '\n')
-            sys.exit()
-        if isinstance(self.E1, (float, int)) is False:
-            print('\n' + 'An invalid datatype was used for the 1st potential. Enter either a float or an integer value corresponding to a potential in V.' + '\n')
-            sys.exit()        
-        if isinstance(self.E2, (float, int)) is False:
-            print('\n' + 'An invalid datatype was used for the 2nd potential. Enter either a float or an integer value corresponding to a potential in V.' + '\n')
-            sys.exit()
-        if isinstance(self.dt, (float, int)) is False:
-            print('\n' + 'An invalid datatype was used for the step time. Enter either a float or an integer value corresponding to a time in s.' + '\n')
-            sys.exit()        
         if isinstance(self.Eini, (float, int)) is False:
             print('\n' + 'An invalid datatype was used for the start potential. Enter either a float or an integer value corresponding to a potential in V.' + '\n')
             sys.exit()
@@ -249,12 +237,6 @@ class hybrid:
             sys.exit() 
 
         '''DATA VALUE ERRORS'''
-        if self.E1 == self.E2:
-            print('\n' + 'First and second potentials must be different values' + '\n')
-            sys.exit()  
-        if self.dt <= 0:
-            print('\n' + 'Step time must be a positive non-zero value' + '\n')
-            sys.exit()    
         if self.Eupp == self.Elow:
             print('\n' + 'Upper and lower vertex potentials must be different values' + '\n')
             sys.exit()
@@ -301,10 +283,10 @@ class LSV(sweep):
         
         '''STARTING FROM LOWER VERTEX POTENTIAL''' 
         if self.Eini == self.Elow:                 
-            self.window = self.Eupp - self.Elow
-            self.dp = int(self.window / self.dE)
+            self.window = np.abs(self.Eupp - self.Elow)
+            self.dp = int(self.window / np.abs(self.dE))
             self.tmax = self.window / self.sr
-            self.dt = self.dE / self.sr
+            self.dt = np.abs(self.dE) / self.sr
         
             '''INDEX'''
             self.index = np.arange(0, ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
@@ -317,7 +299,7 @@ class LSV(sweep):
         
         '''STARTING FROM UPPER VERTEX POTENTIAL''' 
         if self.Eini == self.Eupp:                 
-            self.window = self.Eupp - self.Elow
+            self.window = np.abs(self.Eupp - self.Elow)
             self.dp = int(self.window / np.abs(self.dE))
             self.tmax = self.window / self.sr
             self.dt = np.abs(self.dE) / self.sr
@@ -339,9 +321,9 @@ class CV(sweep):
         '''STARTING FROM LOWER VERTEX POTENTIAL''' 
         if self.Eini == self.Elow:                
             self.window = np.abs(self.Eupp - self.Elow)
-            self.dp = int(self.window / self.dE)
+            self.dp = int(self.window / np.abs(self.dE))
             self.tmax = (2 * self.ns * self.window) / self.sr
-            self.dt = self.dE / self.sr
+            self.dt = np.abs(self.dE) / self.sr
 
             '''INDEX'''
             self.index = np.arange(0, ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
@@ -357,7 +339,7 @@ class CV(sweep):
 
         '''STARTING FROM UPPER VERTEX POTENTIAL'''
         if self.Eini == self.Eupp:     
-            self.window = self.Eupp - self.Elow
+            self.window = np.abs(self.Eupp - self.Elow)
             self.dp = int(self.window / np.abs(self.dE))
             self.tmax = (2 * self.ns * self.window) / self.sr
             self.dt = np.abs(self.dE) / self.sr
@@ -377,14 +359,14 @@ class CV(sweep):
 
         '''STARTING IN BETWEEN VERTEX POTENTIALS'''
         if self.Elow < self.Eini < self.Eupp:        
-            self.uppwindow = self.Eupp - self.Eini
-            self.window = self.Eupp - self.Elow
-            self.lowwindow = self.Eini - self.Elow
-            self.uppdp = int(self.uppwindow / self.dE)
-            self.dp = int(self.window / self.dE)
-            self.lowdp = int(self.lowwindow / self.dE)
+            self.uppwindow = np.abs(self.Eupp - self.Eini)
+            self.window = np.abs(self.Eupp - self.Elow)
+            self.lowwindow = np.abs(self.Eini - self.Elow)
+            self.uppdp = int(self.uppwindow / np.abs(self.dE))
+            self.dp = int(self.window / np.abs(self.dE))
+            self.lowdp = int(self.lowwindow / np.abs(self.dE))
             self.tmax = self.ns * (self.uppwindow + self.window + self.lowwindow) / self.sr
-            self.dt = self.dE / self.sr
+            self.dt = np.abs(self.dE) / self.sr
 
             '''INDEX'''
             self.index = np.arange(0, ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
@@ -393,7 +375,7 @@ class CV(sweep):
             self.t = self.index * self.dt
             
             '''POTENTIAL WITH POSITIVE SCAN DIRECTION'''
-            if dE > 0:
+            if self.dE > 0:
                 self.E = np.array([self.Eini])
                 for ix in range(0, self.ns):
                     self.E = np.append(self.E, np.linspace(self.Eini + self.dE, self.Eupp, self.uppdp, endpoint = True, dtype = np.float32))
@@ -401,7 +383,7 @@ class CV(sweep):
                     self.E = np.append(self.E, np.linspace(self.Elow + self.dE, self.Eini, self.lowdp, endpoint = True, dtype = np.float32))
 
             '''POTENTIAL WITH NEGATIVE SCAN DIRECTION'''
-            if dE < 0:
+            if self.dE < 0:
                 self.E = np.array([self.Eini])
                 for ix in range(0, self.ns):
                     self.E = np.append(self.E, np.linspace(self.Eini - self.dE, self.Elow, self.lowdp, endpoint = True, dtype = np.float32))
@@ -535,80 +517,89 @@ class NPV(pulse):
 """HYBRID CLASSES"""
 class CSV(hybrid):
     '''Waveform for cyclic staircase voltammetry'''
-    def __init__(self, E, E1, E2, dt, Eini, Eupp, Elow, dE, sp, ns):
-        super().__init__(E, E1, E2, dt, Eini, Eupp, Elow, dE, sp, ns)
+    def __init__(self, Eini, Eupp, Elow, dE, sr, sp, ns):
+        super().__init__(Eini, Eupp, Elow, dE, sr, sp, ns)
         
         '''STARTING FROM LOWER VERTEX POTENTIAL''' 
         if self.Eini == self.Elow:                
-            self.window = self.Eupp - self.Elow
-            self.dp = int(self.window / self.dE)
-            self.tmax = (2 * self.ns * self.window) / self.sr
-
-            '''INDEX'''
-            self.index = np.arange(0, self.sp * ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
-        
-            '''TIME'''
-            self.t = self.index * self.dt
-            
-            '''POTENTIAL'''
-            self.E = np.array([self.Eini])
-            for ix in range(0, self.ns):
-                self.E = np.append(self.E, np.linspace(self.Eini + self.dE, self.Eupp, self.dp, endpoint = True, dtype = np.float32))
-                self.E = np.append(self.E, np.linspace(self.Eupp - self.dE, self.Eini, self.dp, endpoint = True, dtype = np.float32))
-
-        '''STARTING FROM UPPER VERTEX POTENTIAL'''
-        if self.Eini == self.Eupp:     
-            self.window = self.Eupp - self.Elow
+            self.window = np.abs(self.Eupp - self.Elow)
             self.dp = int(self.window / np.abs(self.dE))
             self.tmax = (2 * self.ns * self.window) / self.sr
             self.dt = np.abs(self.dE) / self.sr
 
             '''INDEX'''
-            self.index = np.arange(0, ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
+            self.index = np.arange(0, self.sp * ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
         
             '''TIME'''
-            self.t = self.index * self.dt
+            self.t = (self.index / self.sp) * self.dt
             
             '''POTENTIAL'''
-            self.E = np.array([self.Eini])
+            self.E = np.ones([self.sp]) * self.Eini
             for ix in range(0, self.ns):
-                self.E = np.append(self.E, np.linspace(self.Eini + self.dE, self.Elow, self.dp, endpoint = True, dtype = np.float32))
-                self.E = np.append(self.E, np.linspace(self.Elow - self.dE, self.Eini, self.dp, endpoint = True, dtype = np.float32))
+                for iy in range(1, self.dp + 1):
+                    self.E = np.append(self.E, np.ones(self.sp) * (self.Elow + self.dE * iy))
+                for iz in range(1, self.dp + 1):
+                    self.E = np.append(self.E, np.ones(self.sp) * (self.Eupp - self.dE * iz))
 
+        '''STARTING FROM UPPER VERTEX POTENTIAL'''
+        if self.Eini == self.Eupp:     
+            self.window = np.abs(self.Eupp - self.Elow)
+            self.dp = int(self.window / np.abs(self.dE))
+            self.tmax = (2 * self.ns * self.window) / self.sr
+            self.dt = np.abs(self.dE) / self.sr
+
+            '''INDEX'''
+            self.index = np.arange(0, self.sp * ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
+        
+            '''TIME'''
+            self.t = (self.index / self.sp) * self.dt
+            
+            '''POTENTIAL'''
+            self.E = np.ones([self.sp]) * self.Eini
+            for ix in range(0, self.ns):
+                for iy in range(1, self.dp +1):
+                    self.E = np.append(self.E, np.ones(self.sp) * (self.Eupp + self.dE * iy))
+                for iz in range(1, self.dp +1):
+                    self.E = np.append(self.E, np.ones(self.sp) * (self.Elow  - self.dE * iz))
 
         '''STARTING IN BETWEEN VERTEX POTENTIALS'''
         if self.Elow < self.Eini < self.Eupp:        
-            self.uppwindow = self.Eupp - self.Eini
-            self.window = self.Eupp - self.Elow
-            self.lowwindow = self.Eini - self.Elow
-            self.uppdp = int(self.uppwindow / self.dE)
-            self.dp = int(self.window / self.dE)
-            self.lowdp = int(self.lowwindow / self.dE)
+            self.uppwindow = np.abs(self.Eupp - self.Eini)
+            self.window = np.abs(self.Eupp - self.Elow)
+            self.lowwindow = np.abs(self.Eini - self.Elow)
+            self.uppdp = int(self.uppwindow / np.abs(self.dE))
+            self.dp = int(self.window / np.abs(self.dE))
+            self.lowdp = int(self.lowwindow / np.abs(self.dE))
             self.tmax = self.ns * (self.uppwindow + self.window + self.lowwindow) / self.sr
-            self.dt = self.dE / self.sr
+            self.dt = np.abs(self.dE) / self.sr
 
             '''INDEX'''
-            self.index = np.arange(0, ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
+            self.index = np.arange(0, self.sp * ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
         
             '''TIME'''
-            self.t = self.index * self.dt
+            self.t = (self.index / self.sp) * self.dt
             
             '''POTENTIAL WITH POSITIVE SCAN DIRECTION'''
             if dE > 0:
                 self.E = np.array([self.Eini])
                 for ix in range(0, self.ns):
-                    self.E = np.append(self.E, np.linspace(self.Eini + self.dE, self.Eupp, self.uppdp, endpoint = True, dtype = np.float32))
-                    self.E = np.append(self.E, np.linspace(self.Eupp - self.dE, self.Elow, self.dp, endpoint = True, dtype = np.float32))
-                    self.E = np.append(self.E, np.linspace(self.Elow + self.dE, self.Eini, self.lowdp, endpoint = True, dtype = np.float32))
-
+                    for iy in range(1, self.uppdp +1):
+                        self.E = np.append(self.E, np.ones(self.sp) * (self.Eini + self.dE * iy))
+                    for iw in range(1, self.dp + 1):
+                        self.E = np.append(self.E, np.ones(self.sp) * (self.Eupp  - self.dE * iw))
+                    for iz in range(1, self.lowdp +1):
+                        self.E = np.append(self.E, np.ones(self.sp) * (self.Elow  + self.dE * iz))
+                    
             '''POTENTIAL WITH NEGATIVE SCAN DIRECTION'''
             if dE < 0:
                 self.E = np.array([self.Eini])
                 for ix in range(0, self.ns):
-                    self.E = np.append(self.E, np.linspace(self.Eini - self.dE, self.Elow, self.lowdp, endpoint = True, dtype = np.float32))
-                    self.E = np.append(self.E, np.linspace(self.Elow + self.dE, self.Elow, self.dp, endpoint = True, dtype = np.float32))
-                    self.E = np.append(self.E, np.linspace(self.Elow + self.dE, self.Eini, self.uppdp, endpoint = True, dtype = np.float32))
-
+                    for iy in range(1, self.lowdp +1):
+                        self.E = np.append(self.E, np.ones(self.sp) * (self.Eini + self.dE * iy))
+                    for iw in range(1, self.dp + 1):
+                        self.E = np.append(self.E, np.ones(self.sp) * (self.Elow  - self.dE * iw))
+                    for iz in range(1, self.uppdp +1):
+                        self.E = np.append(self.E, np.ones(self.sp) * (self.Eupp  + self.dE * iz))
 
 if __name__ == '__main__':
     
@@ -624,7 +615,7 @@ if __name__ == '__main__':
             raise
     filepath = cwd + '/data/' + 'waveform.txt'
 
-    wf = NPV(Eini = 0, Efin = 0.5, dEs = 0.002, dEp = -0.02, dt = 0.01, pt = 0.005, sp = 1000)
+    wf = CSV(Eini = 0, Eupp = 0.5, Elow = -0.5, dE = 0.002, sr = 0.1, sp = 1000, ns = 1)
 
     with open(filepath, 'w') as file:
         for ix, iy, iz in wf.output():
