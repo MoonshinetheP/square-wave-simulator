@@ -139,6 +139,9 @@ class step:
         zipped = zip(self.index, self.t, self.E)
         return zipped
 
+    def sim(self):
+        return self.E
+
 class pulse:
     '''Parent class for all pulse type waveforms'''
     def __init__(self, Eini, Efin, dEs, dEp, dt, pt, sp):
@@ -203,7 +206,22 @@ class pulse:
     def output(self):
         '''Function that returns the waveform for checking or data processing purposes'''
         zipped = zip(self.index, self.t, self.E)
-        return zipped  
+        return zipped
+    
+    def simulation(self):
+        '''Function that returns values appropriate for simulation'''
+        self.spp = int(self.sp * (self.pt / self.dt))
+        self.window = np.abs(self.Efin - self.Eini)
+        self.dp = int(self.window / np.abs(self.dEs))
+        
+        self.simE = np.array([self.Eini])
+        for ix in range(1, self.dp + 1):
+            try:
+                self.simE = np.append(self.simE, self.E[ix * (self.sp - self.spp)])
+                self.simE = np.append(self.simE, self.E[ix * self.sp])
+                
+            except: pass
+        return self.simE
          
 class hybrid:
     '''Parent class for all waveforms composed of both steps and sweeps'''
@@ -454,7 +472,7 @@ class DPV(pulse):
         self.square = square(2 * np.pi * (1/self.dt) * self.t[:-1], duty = self.pt/self.dt) * self.dEp/2 + self.dEp/2
         
         self.E = np.array([self.Eini])
-        self.E = np.append(self.E, (self.step + self.square[:-1]))
+        self.E = np.append(self.E, (self.step + self.square))
 
 class SWV(pulse):
     """Waveform for square wave voltammetry"""
@@ -482,7 +500,7 @@ class SWV(pulse):
         self.square = square(2 * np.pi * (1/self.dt) * self.t[:-1], duty = self.pt/self.dt) * self.dEp/2 + self.dEp/2
         
         self.E = np.array([self.Eini])
-        self.E = np.append(self.E, (self.step + self.square[:-1]))
+        self.E = np.append(self.E, (self.step + self.square))
 
         '''INPUT POTENTIALS FOR SIMULATION'''
         #self.E = np.array([])
@@ -615,8 +633,10 @@ if __name__ == '__main__':
             raise
     filepath = cwd + '/data/' + 'waveform.txt'
 
-    wf = CSV(Eini = 0, Eupp = 0.5, Elow = -0.5, dE = 0.002, sr = 0.1, sp = 1000, ns = 1)
+    wf = SWV(Eini = 0, Efin = 0.1, dEs= 0.002, dEp = 0.01, dt = 0.02, pt = 0.01, sp = 1000)
 
     with open(filepath, 'w') as file:
+        '''for ix in wf.simulation():
+            file.write(str(ix) + '\n')'''
         for ix, iy, iz in wf.output():
             file.write(str(ix) + ',' + str(iy) + ',' + str(iz) + '\n')
