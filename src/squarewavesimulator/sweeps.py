@@ -95,7 +95,7 @@ class E:
             '''Expanding spatial grid'''         
             self.x = np.array([0])
             while self.x[-1] < self.Xmax:
-                self.x = np.append(self.x, self.x[-1] + self.h)
+                self.x = np.append(self.x, self.x[-1] + self.dX)
                 self.h *= self.expansion
 
             self.n = int(self.x.size)
@@ -147,7 +147,7 @@ class E:
                     '''Appending results'''
                     
                     self.potential = np.append(self.potential, self.theta[k-1])
-                    self.flux = np.append(self.flux, -(self.C[1] - self.C[0]) / (self.dX))
+                    self.flux = np.append(self.flux, -(self.C[1] - self.C[0]) / (self.x[1] - self.x[0]))
 
                 '''Finalise results'''
                 self.output = zip(self.potential, self.flux)
@@ -170,7 +170,7 @@ if __name__ == '__main__':
     
 
     shape = wf.CV(Eini = 0.5, Eupp = 0.5, Elow = 0, dE = -0.001, sr = 0.1, ns = 1)
-    values = [1E-7, 5E-7, 1E-8, 5E-8]
+    values = [1E-3, 5E-3, 1E-4, 5E-4]
     for ix in values:
         instance = E(input = shape, E0 = 0.25, k0 = 1, a = 0.5, cA = 1, DA = 5E-6, r = 0.15, h = ix, expansion = 1.05, Implicit = True, Nernstian = True)
         filepath = cwd + '/data/' + 'test' + str(ix) + '.txt'
