@@ -93,10 +93,18 @@ class E:
         
         if self.Implicit == True:
             '''Expanding spatial grid'''         
-            self.n = 1 + int(self.Xmax / self.dX)
+            self.x = np.array([0])
+            while self.x[-1] < self.Xmax:
+                self.x = np.append(self.x, self.x[-1] + self.h)
+                self.h *= self.expansion
+
+            self.n = int(self.x.size)
             self.m = int(self.theta.size)          
             
             '''Containing arrays'''
+            self.alpha = np.zeros((self.n - 1,))
+            self.beta = np.zeros((self.n - 1,))
+            self.gamma = np.zeros((self.n - 1,))
             self.gmod = np.zeros((self.n - 1,))
             self.delta = np.ones((self.n - 1,))
             self.dmod = np.zeros((self.n - 1,))
@@ -104,14 +112,19 @@ class E:
         
             if self.Nernstian == True:
 
-                self.l = self.dT / (self.dX * self.dX)
-                self.alpha = -self.l
-                self.beta = 2 * self.l + 1
-                self.gamma = -self.l
+                self.delx = np.zeros((self.n,))
+                self.delx[0] = self.x[1] - self.x[0]
+
+                for i in range(1, self.n - 1):
+                    self.delx[i] = self.x[i + 1] - self.x[i]
+
+                    self.alpha[i] = -(2 * self.dT) / (self.delx[i - 1] * (self.delx[i - 1] + self.delx[i]))
+                    self.gamma[i] = -(2 * self.dT) / (self.delx[i] * (self.delx[i - 1] + self.delx[i]))
+                    self.beta[i] = 1 - self.alpha[i] - self.gamma[i]
 
                 self.gmod[0] = 0
                 for i in range(1, self.n -1, 1): # same
-                    self.gmod[i] = self.gamma / (self.beta - self.gmod[i-1] * self.alpha) 
+                    self.gmod[i] = self.gamma[i] / (self.beta[i] - self.gmod[i-1] * self.alpha[i]) 
 
                 '''Output arrays'''
                 self.potential = np.array([])
@@ -123,7 +136,7 @@ class E:
                     '''Forward sweep'''
                     self.dmod[0] = 1 / (1 + np.exp(-self.theta[k - 1]))
                     for x in range(1, self.n - 1):
-                        self.dmod[x] = (self.delta[x] - self.dmod[x - 1] * self.alpha) / (self.beta - self.gmod[x - 1] * self.alpha)
+                        self.dmod[x] = (self.delta[x] - self.dmod[x - 1] * self.alpha[x]) / (self.beta[x] - self.gmod[x - 1] * self.alpha[x])
 
                     self.C[self.n - 1] = 1
                     for y in range(self.n - 2, -1, -1):
@@ -154,11 +167,13 @@ if __name__ == '__main__':
             pass
         else: 
             raise
-    filepath = cwd + '/data/' + 'test.txt'
+    
 
     shape = wf.CV(Eini = 0.5, Eupp = 0.5, Elow = 0, dE = -0.001, sr = 0.1, ns = 1)
-    instance = E(input = shape, E0 = 0.25, k0 = 1, a = 0.5, cA = 1, DA = 5E-6, r = 0.15, h = 5E-6, expansion = 1.05, Implicit = True, Nernstian = True)
-
-    with open(filepath, 'w') as file:
-        for ix, iy in instance.results():
-            file.write(str(ix) + ',' + str(iy) + '\n')
+    values = [1E-7, 5E-7, 1E-8, 5E-8]
+    for ix in values:
+        instance = E(input = shape, E0 = 0.25, k0 = 1, a = 0.5, cA = 1, DA = 5E-6, r = 0.15, h = ix, expansion = 1.05, Implicit = True, Nernstian = True)
+        filepath = cwd + '/data/' + 'test' + str(ix) + '.txt'
+        with open(filepath, 'w') as file:
+            for ix, iy in instance.results():
+                file.write(str(ix) + ',' + str(iy) + '\n')
