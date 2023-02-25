@@ -7,7 +7,7 @@ import waveforms as wf
 
 class E:
     '''Simulation of single electron transfer reaction: A + e- = B'''
-    def __init__(self, input, E0, k0, a, cA, DA, r, h, expansion, Nernstian = False, BV = False, MH = False, Explicit = False, Implicit = False):
+    def __init__(self, input, E0, k0, a, cA, cB, DA, DB, r, h, expansion, Nernstian = False, BV = False, MH = False, Explicit = False, Implicit = False):
         '''Waveform variables'''
         self.input = input
         self.index = self.input.index
@@ -26,7 +26,9 @@ class E:
         self.k0 = k0
         self.a = a
         self.cA = cA
+        self.cB = cB
         self.DA = DA
+        self.DB = DB
 
         self.F = 96485
         self.R = 8.314
@@ -82,7 +84,7 @@ class E:
         self.sigma = ((self.r ** 2) / self.DA) * (self.F / (self.R * self.Temp)) * self.sr
 
         self.T = (self.DA * self.t) / (self.r ** 2)
-        self.dT = self.dX / self.sigma        
+        self.dT = self.T[1] - self.T[0]      
         self.Tmax = self.T[-1] 
 
         self.Xmax = 6 * np.sqrt(self.dA * self.Tmax)
@@ -123,7 +125,7 @@ class E:
                     self.beta[i] = 1 - self.alpha[i] - self.gamma[i]
 
                 self.gmod[0] = 0
-                for i in range(1, self.n -1, 1): # same
+                for i in range(1, self.n -1, 1):
                     self.gmod[i] = self.gamma[i] / (self.beta[i] - self.gmod[i-1] * self.alpha[i]) 
 
                 '''Output arrays'''
@@ -168,12 +170,11 @@ if __name__ == '__main__':
         else: 
             raise
     
-
-    shape = wf.CV(Eini = 0.5, Eupp = 0.5, Elow = 0, dE = -0.001, sr = 0.1, ns = 1)
-    values = [1E-3, 5E-3, 1E-4, 5E-4]
-    for ix in values:
-        instance = E(input = shape, E0 = 0.25, k0 = 1, a = 0.5, cA = 1, DA = 5E-6, r = 0.15, h = ix, expansion = 1.05, Implicit = True, Nernstian = True)
-        filepath = cwd + '/data/' + 'test' + str(ix) + '.txt'
+    iterables = [0.1]
+    for ix in iterables:
+        shape = wf.CV(Eini = 0.5, Eupp = 0.5, Elow = 0, dE = -0.001, sr = ix, ns = 1)
+        instance = E(input = shape, E0 = 0.25, k0 = 1, a = 0.5, cA = 1, DA = 5E-6, r = 0.15, h = 1E-4, expansion = 1.05, Implicit = True, Nernstian = True)
+        filepath = cwd + '/data/' + 'test ' + str(ix) + '.txt'
         with open(filepath, 'w') as file:
             for ix, iy in instance.results():
                 file.write(str(ix) + ',' + str(iy) + '\n')
