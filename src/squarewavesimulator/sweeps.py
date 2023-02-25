@@ -75,23 +75,36 @@ class E:
             sys.exit()
 
         '''Dimensionless variables''' 
-        self.CA = self.cA / self.cA
+        if self.cA >= self.cB:
+            self.cmax = self.cA
+        elif self.cA < self.cB:
+            self.cmax = self.cB
         
-        self.dA = self.DA / self.DA
+        self.CA = self.cA / self.cmax
+        self.CB = self.cB / self.cmax
+
+        if self.DA >= self.DB:
+            self.Dmax = self.DA
+        elif self.DA < self.DB:
+            self.Dmax = self.BD
+
+        self.dA = self.DA / self.Dmax
+        self.db = self.DB / self.Dmax
+        self.d = self.Dmax / self.Dmax
 
         self.dX = self.h / self.r
 
-        self.sigma = ((self.r ** 2) / self.DA) * (self.F / (self.R * self.Temp)) * self.sr
+        self.sigma = ((self.r ** 2) / self.Dmax) * (self.F / (self.R * self.Temp)) * self.sr
 
-        self.T = (self.DA * self.t) / (self.r ** 2)
+        self.T = (self.Dmax * self.t) / (self.r ** 2)
         self.dT = self.T[1] - self.T[0]      
         self.Tmax = self.T[-1] 
 
-        self.Xmax = 6 * np.sqrt(self.dA * self.Tmax)
+        self.Xmax = 6 * np.sqrt(self.d * self.Tmax)
 
         self.theta = (self.F / (self.R * self.Temp)) * (self.E - self.E0)
 
-        self.K0 = (self.k0 * self.r) / self.DA
+        self.K0 = (self.k0 * self.r) / self.Dmax
         
         if self.Implicit == True:
             '''Expanding spatial grid'''         
@@ -104,13 +117,13 @@ class E:
             self.m = int(self.theta.size)          
             
             '''Containing arrays'''
-            self.alpha = np.zeros((self.n - 1,))
-            self.beta = np.zeros((self.n - 1,))
-            self.gamma = np.zeros((self.n - 1,))
-            self.gmod = np.zeros((self.n - 1,))
-            self.delta = np.ones((self.n - 1,))
-            self.dmod = np.zeros((self.n - 1,))
-            self.C = np.ones((self.n))
+            self.alpha_A = np.zeros((self.n - 1,))
+            self.beta_A = np.zeros((self.n - 1,))
+            self.gamma_A = np.zeros((self.n - 1,))
+            self.gmod_A = np.zeros((self.n - 1,))
+            self.delta_A = np.ones((self.n - 1,))
+            self.dmod_A = np.zeros((self.n - 1,))
+            self.C_A = np.ones((self.n))
         
             if self.Nernstian == True:
 
@@ -120,13 +133,13 @@ class E:
                 for i in range(1, self.n - 1):
                     self.delx[i] = self.x[i + 1] - self.x[i]
 
-                    self.alpha[i] = -(2 * self.dT) / (self.delx[i - 1] * (self.delx[i - 1] + self.delx[i]))
-                    self.gamma[i] = -(2 * self.dT) / (self.delx[i] * (self.delx[i - 1] + self.delx[i]))
-                    self.beta[i] = 1 - self.alpha[i] - self.gamma[i]
+                    self.alpha_A[i] = -(2 * self.dA * self.dT) / (self.delx[i - 1] * (self.delx[i - 1] + self.delx[i]))
+                    self.gamma_A[i] = -(2 * self.dA * self.dT) / (self.delx[i] * (self.delx[i - 1] + self.delx[i]))
+                    self.beta_A[i] = 1 - self.alpha_A[i] - self.gamma_A[i]
 
-                self.gmod[0] = 0
+                self.gmod_A[0] = 0
                 for i in range(1, self.n -1, 1):
-                    self.gmod[i] = self.gamma[i] / (self.beta[i] - self.gmod[i-1] * self.alpha[i]) 
+                    self.gmod_A[i] = self.gamma_A[i] / (self.beta_A[i] - self.gmod_A[i-1] * self.alpha_A[i]) 
 
                 '''Output arrays'''
                 self.potential = np.array([])
@@ -136,20 +149,20 @@ class E:
                 for k in range(1, self.theta.size + 1, 1):
 
                     '''Forward sweep'''
-                    self.dmod[0] = 1 / (1 + np.exp(-self.theta[k - 1]))
+                    self.dmod_A[0] = 1 / (1 + np.exp(-self.theta[k - 1]))
                     for x in range(1, self.n - 1):
-                        self.dmod[x] = (self.delta[x] - self.dmod[x - 1] * self.alpha[x]) / (self.beta[x] - self.gmod[x - 1] * self.alpha[x])
+                        self.dmod_A[x] = (self.delta_A[x] - self.dmod_A[x - 1] * self.alpha_A[x]) / (self.beta_A[x] - self.gmod_A[x - 1] * self.alpha_A[x])
 
-                    self.C[self.n - 1] = 1
+                    self.C_A[self.n - 1] = 1
                     for y in range(self.n - 2, -1, -1):
-                        self.C[y] = self.dmod[y] - self.gmod[y] * self.C[y + 1]
+                        self.C_A[y] = self.dmod_A[y] - self.gmod_A[y] * self.C_A[y + 1]
 
-                        self.delta[y] = self.C[y]
+                        self.delta_A[y] = self.C_A[y]
 
                     '''Appending results'''
                     
                     self.potential = np.append(self.potential, self.theta[k-1])
-                    self.flux = np.append(self.flux, -(self.C[1] - self.C[0]) / (self.x[1] - self.x[0]))
+                    self.flux = np.append(self.flux, -(self.C_A[1] - self.C_A[0]) / (self.x[1] - self.x[0]))
 
                 '''Finalise results'''
                 self.output = zip(self.potential, self.flux)
@@ -173,7 +186,7 @@ if __name__ == '__main__':
     iterables = [0.1]
     for ix in iterables:
         shape = wf.CV(Eini = 0.5, Eupp = 0.5, Elow = 0, dE = -0.001, sr = ix, ns = 1)
-        instance = E(input = shape, E0 = 0.25, k0 = 1, a = 0.5, cA = 1, DA = 5E-6, r = 0.15, h = 1E-4, expansion = 1.05, Implicit = True, Nernstian = True)
+        instance = E(input = shape, E0 = 0.25, k0 = 1, a = 0.5, cA = 0.005, cB = 0.005, DA = 5E-6, DB = 5E-6, r = 0.15, h = 1E-4, expansion = 1.05, Implicit = True, Nernstian = True)
         filepath = cwd + '/data/' + 'test ' + str(ix) + '.txt'
         with open(filepath, 'w') as file:
             for ix, iy in instance.results():
