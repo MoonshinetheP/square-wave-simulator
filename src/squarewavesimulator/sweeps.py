@@ -86,10 +86,10 @@ class E:
         if self.DA >= self.DB:
             self.Dmax = self.DA
         elif self.DA < self.DB:
-            self.Dmax = self.BD
+            self.Dmax = self.DB
 
         self.dA = self.DA / self.Dmax
-        self.db = self.DB / self.Dmax
+        self.dB = self.DB / self.Dmax
         self.d = self.Dmax / self.Dmax
 
         self.dX = self.h / self.r
@@ -123,7 +123,15 @@ class E:
             self.gmod_A = np.zeros((self.n - 1,))
             self.delta_A = np.ones((self.n - 1,))
             self.dmod_A = np.zeros((self.n - 1,))
-            self.C_A = np.ones((self.n))
+            self.C_A = np.ones((self.n)) * self.CA
+
+            self.alpha_B = np.zeros((self.n - 1,))
+            self.beta_B = np.zeros((self.n - 1,))
+            self.gamma_B = np.zeros((self.n - 1,))
+            self.gmod_B = np.zeros((self.n - 1,))
+            self.delta_B = np.ones((self.n - 1,))
+            self.dmod_B = np.zeros((self.n - 1,))
+            self.C_B = np.ones((self.n)) * self.CB
         
             if self.Nernstian == True:
 
@@ -137,9 +145,17 @@ class E:
                     self.gamma_A[i] = -(2 * self.dA * self.dT) / (self.delx[i] * (self.delx[i - 1] + self.delx[i]))
                     self.beta_A[i] = 1 - self.alpha_A[i] - self.gamma_A[i]
 
+                    self.alpha_B[i] = -(2 * self.dB * self.dT) / (self.delx[i - 1] * (self.delx[i - 1] + self.delx[i]))
+                    self.gamma_B[i] = -(2 * self.dB * self.dT) / (self.delx[i] * (self.delx[i - 1] + self.delx[i]))
+                    self.beta_B[i] = 1 - self.alpha_B[i] - self.gamma_B[i]
+                    
                 self.gmod_A[0] = 0
                 for i in range(1, self.n -1, 1):
                     self.gmod_A[i] = self.gamma_A[i] / (self.beta_A[i] - self.gmod_A[i-1] * self.alpha_A[i]) 
+
+                self.gmod_B[0] = 0
+                for i in range(1, self.n -1, 1):
+                    self.gmod_B[i] = self.gamma_B[i] / (self.beta_B[i] - self.gmod_B[i-1] * self.alpha_B[i])
 
                 '''Output arrays'''
                 self.potential = np.array([])
@@ -158,11 +174,19 @@ class E:
                         self.C_A[y] = self.dmod_A[y] - self.gmod_A[y] * self.C_A[y + 1]
 
                         self.delta_A[y] = self.C_A[y]
-
-                    '''Appending results'''
                     
+                    self.dmod_B[0] = 1 / (1 + np.exp(self.theta[k - 1]))
+                    for x in range(1, self.n - 1):
+                        self.dmod_B[x] = (self.delta_B[x] - self.dmod_B[x - 1] * self.alpha_B[x]) / (self.beta_B[x] - self.gmod_B[x - 1] * self.alpha_B[x])
+
+                    self.C_B[self.n - 1] = 1
+                    for y in range(self.n - 2, -1, -1):
+                        self.C_B[y] = self.dmod_B[y] - self.gmod_B[y] * self.C_B[y + 1]
+
+                        self.delta_B[y] = self.C_B[y]
+                    '''Appending results'''
                     self.potential = np.append(self.potential, (self.E0 + ((self.R * self.Temp) / self.F) * self.theta[k-1]))
-                    self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cA * self.DA) * (-(self.C_A[1] - self.C_A[0]) / (self.x[1] - self.x[0])))
+                    self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cA * self.DA) * (-(self.C_A[1] - self.C_A[0]) / (self.x[1] - self.x[0])) - (self.F * np.pi * self.r * self.cB * self.DB) * (-(self.C_B[1] - self.C_B[0]) / (self.x[1] - self.x[0])))
 
                 '''Finalise results'''
                 self.output = zip(self.potential, self.flux)
@@ -183,10 +207,10 @@ if __name__ == '__main__':
         else: 
             raise
     
-    iterables = [0.1]
+    iterables = [0, 0.001, 0.005, 0.01]
     for ix in iterables:
-        shape = wf.CV(Eini = 0.5, Eupp = 0.5, Elow = 0, dE = -0.001, sr = ix, ns = 1)
-        instance = E(input = shape, E0 = 0.25, k0 = 1, a = 0.5, cA = 0.005, cB = 0.005, DA = 5E-6, DB = 5E-6, r = 0.15, h = 1E-4, expansion = 1.05, Implicit = True, Nernstian = True)
+        shape = wf.CV(Eini = 0.5, Eupp = 0.5, Elow = 0, dE = -0.001, sr = 0.1, ns = 1)
+        instance = E(input = shape, E0 = 0.25, k0 = 1, a = 0.5, cA = 0.005, cB = ix, DA = 5E-6, DB = 5E-6, r = 0.15, h = 1E-4, expansion = 1.05, Implicit = True, Nernstian = True)
         filepath = cwd + '/data/' + 'test ' + str(ix) + '.txt'
         with open(filepath, 'w') as file:
             for ix, iy in instance.results():
