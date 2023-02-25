@@ -161,8 +161,8 @@ class E:
 
                     '''Appending results'''
                     
-                    self.potential = np.append(self.potential, self.theta[k-1])
-                    self.flux = np.append(self.flux, -(self.C_A[1] - self.C_A[0]) / (self.x[1] - self.x[0]))
+                    self.potential = np.append(self.potential, (self.E0 + ((self.R * self.Temp) / self.F) * self.theta[k-1]))
+                    self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cA * self.DA) * (-(self.C_A[1] - self.C_A[0]) / (self.x[1] - self.x[0])))
 
                 '''Finalise results'''
                 self.output = zip(self.potential, self.flux)
