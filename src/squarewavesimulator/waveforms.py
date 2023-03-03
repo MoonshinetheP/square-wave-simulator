@@ -217,7 +217,7 @@ class pulse:
         self.simE = np.array([self.Eini])
         for ix in range(1, self.dp + 1):
             try:
-                self.simE = np.append(self.simE, self.E[ix * (self.sp - self.spp)])
+                self.simE = np.append(self.simE, self.E[ix * (self.sp) - self.spp])
                 self.simE = np.append(self.simE, self.E[ix * self.sp])
                 
             except: pass
@@ -633,10 +633,10 @@ if __name__ == '__main__':
             raise
     filepath = cwd + '/data/' + 'waveform.txt'
 
-    wf = SWV(Eini = 0, Efin = 0.1, dEs= 0.002, dEp = 0.01, dt = 0.02, pt = 0.01, sp = 1000)
+    wf = NPV(Eini = 0, Efin = 0.1, dEs= 0.002, dEp = 0.01, dt = 0.02, pt = 0.01, sp = 1000)
 
     with open(filepath, 'w') as file:
-        '''for ix in wf.simulation():
-            file.write(str(ix) + '\n')'''
-        for ix, iy, iz in wf.output():
-            file.write(str(ix) + ',' + str(iy) + ',' + str(iz) + '\n')
+        for ix in wf.simulation():
+            file.write(str(ix) + '\n')
+        '''for ix, iy, iz in wf.output():
+            file.write(str(ix) + ',' + str(iy) + ',' + str(iz) + '\n')'''
