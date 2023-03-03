@@ -112,7 +112,11 @@ class E:
                 self.x = np.append(self.x, self.x[-1] + self.dX)
                 self.h *= self.expansion
             
-            self.nt = self.sp//2
+            self.sT = (self.Dmax * self.dt) / (self.r ** 2)
+            self.pT = (self.Dmax * self.pt) / (self.r ** 2)
+
+            self.sn = int(self.sT - self.pT / self.dT)
+            self.pn = int(self.pT / self.dT)
             self.n = int(self.x.size)
             self.m = int(self.theta.size)          
             
@@ -156,55 +160,100 @@ class E:
                 self.gmod_B[i] = self.gamma_B[i] / (self.beta_B[i] - self.gmod_B[i-1] * self.alpha_B[i])
 
             '''Output arrays'''
-            self.potential = np.array([])
+            self.potential = np.linspace(self.Eini, self.Efin, self.T.size, endpoint = True)
             self.flux = np.array([])
-
-            
-
-                
-
+            self.steppotential = np.array([])
+            self.stepflux = np.array([])
             '''Solving'''
             for k in range(1, self.theta.size + 1, 1):
-                for j in range(0, self.nt):
-                    '''Forward sweep'''
-                    if self.Nernstian == True:
-                        self.dmod_A[0] = 1 / (1 + np.exp(-self.theta[k - 1]))
-                        self.dmod_B[0] = 1 / (1 + np.exp(self.theta[k - 1]))
+                if k % 2 != 0:
+                    for j in range(0, self.sn):
+                        '''Forward sweep'''
+                        if self.Nernstian == True:
+                            self.dmod_A[0] = 1 / (1 + np.exp(-self.theta[k - 1]))
+                            self.dmod_B[0] = 1 / (1 + np.exp(self.theta[k - 1]))
 
-                    if self.BV == True:
-                        self.dmod_A[0] = self.h *np.exp(-1 * self.a * self.theta[k-1]) * self.K0 * (self.CA + self.CB) * np.exp(self.theta[k-1])
-                        self.beta_A[0] = 1 + self.h * np.exp(-1 * self.a * self.theta[k-1]) * self.K0 * (1 + np.exp(self.theta[k-1]))
-                        self.gamma_A[0] = -1
+                        if self.BV == True:
+                            self.dmod_A[0] = self.h *np.exp(-1 * self.a * self.theta[k-1]) * self.K0 * (self.CA + self.CB) * np.exp(self.theta[k-1])
+                            self.beta_A[0] = 1 + self.h * np.exp(-1 * self.a * self.theta[k-1]) * self.K0 * (1 + np.exp(self.theta[k-1]))
+                            self.gamma_A[0] = -1
 
-                        self.dmod_B[0] = self.h *np.exp(1 - self.a * self.theta[k-1]) * self.K0 * (self.CA + self.CB) * np.exp(self.theta[k-1])
-                        self.beta_B[0] = 1 + self.h * np.exp(1 - self.a * self.theta[k-1]) * self.K0 * (1 + np.exp(self.theta[k-1]))
-                        self.gamma_A[0] = -1
+                            self.dmod_B[0] = self.h *np.exp(1 - self.a * self.theta[k-1]) * self.K0 * (self.CA + self.CB) * np.exp(self.theta[k-1])
+                            self.beta_B[0] = 1 + self.h * np.exp(1 - self.a * self.theta[k-1]) * self.K0 * (1 + np.exp(self.theta[k-1]))
+                            self.gamma_A[0] = -1
 
-                    for x in range(1, self.n - 1):
-                        self.dmod_A[x] = (self.delta_A[x] - self.dmod_A[x - 1] * self.alpha_A[x]) / (self.beta_A[x] - self.gmod_A[x - 1] * self.alpha_A[x])
-                    
-                        self.dmod_B[x] = (self.delta_B[x] - self.dmod_B[x - 1] * self.alpha_B[x]) / (self.beta_B[x] - self.gmod_B[x - 1] * self.alpha_B[x])
-
-                    self.C_A[self.n - 1] = self.CA
-                    self.C_B[self.n - 1] = self.CB
-                    for y in range(self.n - 2, -1, -1):
+                        for x in range(1, self.n - 1):
+                            self.dmod_A[x] = (self.delta_A[x] - self.dmod_A[x - 1] * self.alpha_A[x]) / (self.beta_A[x] - self.gmod_A[x - 1] * self.alpha_A[x])
                         
-                        self.C_A[y] = self.dmod_A[y] - self.gmod_A[y] * self.C_A[y + 1]
-                        self.delta_A[y] = self.C_A[y]
-                
-                        self.C_B[y] = self.dmod_B[y] - self.gmod_B[y] * self.C_B[y + 1]
-                        self.delta_B[y] = self.C_B[y]
-                       
-                    '''Appending results'''
+                            self.dmod_B[x] = (self.delta_B[x] - self.dmod_B[x - 1] * self.alpha_B[x]) / (self.beta_B[x] - self.gmod_B[x - 1] * self.alpha_B[x])
+
+                        self.C_A[self.n - 1] = self.CA
+                        self.C_B[self.n - 1] = self.CB
+                        for y in range(self.n - 2, -1, -1):
+                            
+                            self.C_A[y] = self.dmod_A[y] - self.gmod_A[y] * self.C_A[y + 1]
+                            self.delta_A[y] = self.C_A[y]
                     
-                    self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cA * self.DA) * (-(self.C_A[1] - self.C_A[0]) / (self.x[1] - self.x[0])))
-                print(f'{k} out of {self.theta.size}') 
-                self.potential = np.append(self.potential, (self.E0 + ((self.R * self.Temp) / self.F) * self.theta[k-1]))
+                            self.C_B[y] = self.dmod_B[y] - self.gmod_B[y] * self.C_B[y + 1]
+                            self.delta_B[y] = self.C_B[y]
+                        
+                        '''Appending results'''
+                        
+                        self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cA * self.DA) * (-(self.C_A[1] - self.C_A[0]) / (self.x[1] - self.x[0]))- (self.F * np.pi * self.r * self.cB * self.DB) * (-(self.C_B[1] - self.C_B[0]) / (self.x[1] - self.x[0])))
+                    
+        
+
+                if k % 2 == 0:
+                    for l in range(0, self.pn):
+                        '''Forward sweep'''
+                        if self.Nernstian == True:
+                            self.dmod_A[0] = 1 / (1 + np.exp(-self.theta[k - 1]))
+                            self.dmod_B[0] = 1 / (1 + np.exp(self.theta[k - 1]))
+
+                        if self.BV == True:
+                            self.dmod_A[0] = self.h *np.exp(-1 * self.a * self.theta[k-1]) * self.K0 * (self.CA + self.CB) * np.exp(self.theta[k-1])
+                            self.beta_A[0] = 1 + self.h * np.exp(-1 * self.a * self.theta[k-1]) * self.K0 * (1 + np.exp(self.theta[k-1]))
+                            self.gamma_A[0] = -1
+
+                            self.dmod_B[0] = self.h *np.exp(1 - self.a * self.theta[k-1]) * self.K0 * (self.CA + self.CB) * np.exp(self.theta[k-1])
+                            self.beta_B[0] = 1 + self.h * np.exp(1 - self.a * self.theta[k-1]) * self.K0 * (1 + np.exp(self.theta[k-1]))
+                            self.gamma_A[0] = -1
+
+                        for x in range(1, self.n - 1):
+                            self.dmod_A[x] = (self.delta_A[x] - self.dmod_A[x - 1] * self.alpha_A[x]) / (self.beta_A[x] - self.gmod_A[x - 1] * self.alpha_A[x])
+                        
+                            self.dmod_B[x] = (self.delta_B[x] - self.dmod_B[x - 1] * self.alpha_B[x]) / (self.beta_B[x] - self.gmod_B[x - 1] * self.alpha_B[x])
+
+                        self.C_A[self.n - 1] = self.CA
+                        self.C_B[self.n - 1] = self.CB
+                        for y in range(self.n - 2, -1, -1):
+                            
+                            self.C_A[y] = self.dmod_A[y] - self.gmod_A[y] * self.C_A[y + 1]
+                            self.delta_A[y] = self.C_A[y]
+                    
+                            self.C_B[y] = self.dmod_B[y] - self.gmod_B[y] * self.C_B[y + 1]
+                            self.delta_B[y] = self.C_B[y]
+                        
+                        '''Appending results'''
+                        
+                        self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cA * self.DA) * (-(self.C_A[1] - self.C_A[0]) / (self.x[1] - self.x[0]))- (self.F * np.pi * self.r * self.cB * self.DB) * (-(self.C_B[1] - self.C_B[0]) / (self.x[1] - self.x[0])))
+                    self.steppotential = np.append(self.steppotential, (self.E0 + ((self.R * self.Temp) / self.F) * self.theta[k-1]))
+                    self.stepflux = np.append(self.stepflux, (self.F * np.pi * self.r * self.cA * self.DA) * (-(self.C_A[1] - self.C_A[0]) / (self.x[1] - self.x[0]))- (self.F * np.pi * self.r * self.cB * self.DB) * (-(self.C_B[1] - self.C_B[0]) / (self.x[1] - self.x[0])))
+                print(f'{k} out of {self.theta.size}')
+                
             '''Finalise results'''
-            self.output = zip(self.t, self.flux)
+            self.simplified = zip(self.steppotential, self.stepflux)
+            self.detailed = zip(self.potential, self.flux)
     
-    def results(self):
-        return self.output
+    def results(self, simple = False, details = False):
+        self.simple = simple
+        self.details = details
+
+        if simple == True:
+            return self.simplified
+        if details == True:
+            return self.detailed
+
 
 
 if __name__ == '__main__':
@@ -223,7 +272,7 @@ if __name__ == '__main__':
 
     
     shape =  wf.NPV(Eini = 0, Efin = 0.5, dEs= 0.005, dEp = 0.01, dt = 0.02, pt = 0.01, sp = 1000)
-    instance = E(input = shape, E0 = 0.25, k0 = 10, a = 0.5, cA = 0.005, cB = 0, DA = 5E-6, DB = 5E-6, r = 0.15, h = 1E-4, expansion = 1.05, Implicit = True, Nernstian = True)
+    instance = E(input = shape, E0 = 0.25, k0 = 10, a = 0.5, cA = 0.00, cB = 0.005, DA = 5E-6, DB = 5E-6, r = 0.15, h = 1E-4, expansion = 1.05, Implicit = True, Nernstian = True)
     with open(filepath, 'w') as file:
         for ix, iy in instance.results():
             file.write(str(ix) + ',' + str(iy) + '\n')
