@@ -497,7 +497,7 @@ class SWV(pulse):
         self.step = np.array([])
         for ix in range(0, self.dp):
             self.step = np.append(self.step, np.ones((self.sp)) * (ix * self.dEs))
-        self.square = square(2 * np.pi * (1/self.dt) * self.t[:-1], duty = self.pt/self.dt) * self.dEp/2 + self.dEp/2
+        self.square = square(2 * np.pi * (1/self.dt) * self.t[:-1], duty = self.pt/self.dt) * self.dEp
         
         self.E = np.array([self.Eini])
         self.E = np.append(self.E, (self.step + self.square))
@@ -633,10 +633,10 @@ if __name__ == '__main__':
             raise
     filepath = cwd + '/data/' + 'waveform.txt'
 
-    wf = NPV(Eini = 0, Efin = 0.1, dEs= 0.002, dEp = 0.01, dt = 0.02, pt = 0.01, sp = 1000)
+    wf = SWV(Eini = 0, Efin = 1, dEs = 0.005, dEp = 0.02, dt = 0.01, pt = 0.005, sp = 1000)
 
     with open(filepath, 'w') as file:
-        for ix in wf.simulation():
-            file.write(str(ix) + '\n')
-        '''for ix, iy, iz in wf.output():
-            file.write(str(ix) + ',' + str(iy) + ',' + str(iz) + '\n')'''
+        '''for ix in wf.simulation():
+            file.write(str(ix) + '\n')'''
+        for ix, iy, iz in wf.output():
+            file.write(str(ix) + ',' + str(iy) + ',' + str(iz) + '\n')
