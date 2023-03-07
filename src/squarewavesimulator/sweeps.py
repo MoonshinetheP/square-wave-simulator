@@ -106,6 +106,55 @@ class E:
 
         self.K0 = (self.k0 * self.r) / self.Dmax
         
+        if self.Explicit == True:
+            self.lamb = 0.45
+            self.dX = np.sqrt(self.dT / self.lamb)
+            
+            self.x = np.array([0])
+            while self.x[-1] < self.Xmax:
+                self.x = np.append(self.x, self.x[-1] + self.dX)
+                
+            self.n = int(self.x.size)
+            self.m = int(self.theta.size)
+
+            self.dmod_A = np.zeros((self.n - 1,))
+            self.C_A = np.ones((self.n)) * self.CA
+
+            self.dmod_B = np.zeros((self.n - 1,))
+            self.C_B = np.ones((self.n)) * self.CB
+            
+            self.potential = np.array([])
+            self.flux = np.array([])
+
+            for k in range(1, self.m + 1, 1):
+                '''Forward sweep'''
+                if self.Nernstian == True:
+                    self.dmod_A[0] = 1 / (1 + np.exp(-self.theta[k - 1])) #self.C_A[0] + self.C_B[0] * np.exp(self.theta[k - 1]) 
+                    self.dmod_B[0] =  1 / (1 + np.exp(self.theta[k - 1])) #self.C_B[0] + (self.C_A[0] * np.exp(-self.theta[k - 1]))
+                
+                if self.BV == True:
+                    self.dmod_A[0] = (self.C_A[1] + self.dX  * self.K0 * np.exp((1-self.a) * self.theta[k-1])) / (1 + self.dX * self.K0 * (np.exp((-self.a) * self.theta[k-1]) + np.exp((1-self.a) * self.theta[k - 1])))
+                    #CR[k,0] = (CR1kb + dX*K0*np.exp(-alpha*eps[k])*(CO1kb + CR1kb/DOR))/(1 + dX*K0*(np.exp((1-alpha)*eps[k]) + np.exp(-alpha*eps[k])/DOR))
+                    # CO[k,0] = CO1kb + (CR1kb - CR[k,0])/DOR
+
+                for x in range(1, self.n - 1):
+                    
+                    self.dmod_A[x] = self.lamb*self.C_A[x - 1] + (1 - 2*self.lamb)*self.C_A[x] + self.lamb*self.C_A[x + 1]
+                
+                    #self.dmod_B[x] = self.lamb*self.C_B[x - 1] + (1 - 2*self.lamb)*self.C_B[x] + self.lamb*self.C_B[x + 1]
+
+                self.C_A[self.n - 1] = self.CA
+                #self.C_B[self.n - 1] = self.CB
+
+                for y in range(self.n - 2, -1, -1):
+                    
+                    self.C_A[y] = self.dmod_A[y]
+            
+                    #self.C_B[y] = self.dmod_B[y]
+                self.potential = np.append(self.potential, (self.E0 + ((self.R * self.Temp) / self.F) * self.theta[k-1]))
+                self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cA * self.DA) * (-(-self.C_A[2] + 4*self.C_A[1] - 3*self.C_A[0]) / (2 * self.dX)))# - (self.F * np.pi * self.r * self.cB * self.DB) * (-(-self.C_B[2] + 4*self.C_B[1]- 3*self.C_B[0]) / (2*self.dX)))
+            self.output = zip(self.potential, self.flux)
+
         if self.Implicit == True:
             '''Expanding spatial grid'''         
             self.x = np.array([0])
@@ -217,11 +266,11 @@ if __name__ == '__main__':
         else: 
             raise
     
-    iterables = [0.1]
+    iterables = [0.01]
     for ix in iterables:
-        shape = wf.CV(Eini = 0.5, Eupp = 0.5, Elow = 0, dE = -0.001, sr = ix, ns = 1)
-        instance = E(input = shape, E0 = 0.25, k0 = 10, a = 0.5, cA = 0.005, cB = 0.001, DA = 5E-6, DB = 5E-6, r = 0.15, h = 1E-4, expansion = 1.05, Implicit = True, Nernstian = True)
-        filepath = cwd + '/data/' + 'test blah' + str(ix) + '.txt'
+        shape = wf.CV(Eini = 0.5, Eupp = 0.5, Elow = 0, dE = -0.001, sr = 0.1, ns = 1)
+        instance = E(input = shape, E0 = 0.25, k0 = ix, a = 0.5, cA = 0.005, cB = 0.000, DA = 5E-6, DB = 5E-6, r = 0.15, h = 1E-4, expansion = 1.05, Explicit = True, BV = True)
+        filepath = cwd + '/data/' + 'test BV' + str(ix) + '.txt'
         with open(filepath, 'w') as file:
             for ix, iy in instance.results():
                 file.write(str(ix) + ',' + str(iy) + '\n')
