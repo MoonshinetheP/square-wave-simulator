@@ -1,6 +1,7 @@
 import numpy as np
 import sys
 import os
+import time
 from errno import EEXIST
 
 import waveforms as wf
@@ -115,7 +116,7 @@ class E:
             self.sT = (self.Dmax * self.dt) / (self.r ** 2)
             self.pT = (self.Dmax * self.pt) / (self.r ** 2)
 
-            self.sn = int(self.sT - self.pT / self.dT)
+            self.sn = int(abs(self.sT - self.pT) / self.dT)
             self.pn = int(self.pT / self.dT)
             self.n = int(self.x.size)
             self.m = int(self.theta.size)          
@@ -162,8 +163,10 @@ class E:
             '''Output arrays'''
             self.potential = np.linspace(self.Eini, self.Efin, self.T.size, endpoint = True)
             self.flux = np.array([])
-            self.steppotential = np.array([])
-            self.stepflux = np.array([])
+            self.possteppotential = np.array([])
+            self.posstepflux = np.array([])
+            self.negsteppotential = np.array([])
+            self.negstepflux = np.array([])
             '''Solving'''
             for k in range(1, self.theta.size + 1, 1):
                 if k % 2 != 0:
@@ -198,9 +201,10 @@ class E:
                             self.delta_B[y] = self.C_B[y]
                         
                         '''Appending results'''
-                        
-                        self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cA * self.DA) * (-(self.C_A[1] - self.C_A[0]) / (self.x[1] - self.x[0]))- (self.F * np.pi * self.r * self.cB * self.DB) * (-(self.C_B[1] - self.C_B[0]) / (self.x[1] - self.x[0])))
-                    
+
+                        self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cA * self.DA) * (-(self.C_A[1] - self.C_A[0]) / (self.x[1] - self.x[0])) - (self.F * np.pi * self.r * self.cB * self.DB) * (-(self.C_B[1] - self.C_B[0]) / (self.x[1] - self.x[0])))
+                    self.negsteppotential = np.append(self.negsteppotential, (self.E0 + ((self.R * self.Temp) / self.F) * self.theta[k-1]))
+                    self.negstepflux = np.append(self.negstepflux, (self.F * np.pi * self.r * self.cA * self.DA) * (-(self.C_A[1] - self.C_A[0]) / (self.x[1] - self.x[0]))- (self.F * np.pi * self.r * self.cB * self.DB) * (-(self.C_B[1] - self.C_B[0]) / (self.x[1] - self.x[0])))
         
 
                 if k % 2 == 0:
@@ -237,27 +241,27 @@ class E:
                         '''Appending results'''
                         
                         self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cA * self.DA) * (-(self.C_A[1] - self.C_A[0]) / (self.x[1] - self.x[0]))- (self.F * np.pi * self.r * self.cB * self.DB) * (-(self.C_B[1] - self.C_B[0]) / (self.x[1] - self.x[0])))
-                    self.steppotential = np.append(self.steppotential, (self.E0 + ((self.R * self.Temp) / self.F) * self.theta[k-1]))
-                    self.stepflux = np.append(self.stepflux, (self.F * np.pi * self.r * self.cA * self.DA) * (-(self.C_A[1] - self.C_A[0]) / (self.x[1] - self.x[0]))- (self.F * np.pi * self.r * self.cB * self.DB) * (-(self.C_B[1] - self.C_B[0]) / (self.x[1] - self.x[0])))
+                    
+                    self.possteppotential = np.append(self.possteppotential, (self.E0 + ((self.R * self.Temp) / self.F) * self.theta[k-1]))
+                    self.posstepflux = np.append(self.posstepflux, (self.F * np.pi * self.r * self.cA * self.DA) * (-(self.C_A[1] - self.C_A[0]) / (self.x[1] - self.x[0]))- (self.F * np.pi * self.r * self.cB * self.DB) * (-(self.C_B[1] - self.C_B[0]) / (self.x[1] - self.x[0])))
+                
                 print(f'{k} out of {self.theta.size}')
                 
             '''Finalise results'''
-            self.simplified = zip(self.steppotential, self.stepflux)
+            self.negsimplified = zip(self.negsteppotential, self.negstepflux)
+            self.possimplified = zip(self.possteppotential, self.posstepflux)
             self.detailed = zip(self.potential, self.flux)
     
-    def results(self, simple = False, details = False):
-        self.simple = simple
-        self.details = details
-
-        if simple == True:
-            return self.simplified
-        if details == True:
-            return self.detailed
+    def results(self):
+        return self.possimplified
+        
+        #return self.detailed
 
 
 
 if __name__ == '__main__':
-        
+    
+    start = time.time()
     cwd = os.getcwd()
 
     try:
@@ -271,8 +275,11 @@ if __name__ == '__main__':
 
 
     
-    shape =  wf.NPV(Eini = 0, Efin = 0.5, dEs= 0.005, dEp = 0.01, dt = 0.02, pt = 0.01, sp = 1000)
+    shape =  wf.SWV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, dt = 0.01, pt = 0.005, sp = 1000)
     instance = E(input = shape, E0 = 0.25, k0 = 10, a = 0.5, cA = 0.00, cB = 0.005, DA = 5E-6, DB = 5E-6, r = 0.15, h = 1E-4, expansion = 1.05, Implicit = True, Nernstian = True)
     with open(filepath, 'w') as file:
         for ix, iy in instance.results():
             file.write(str(ix) + ',' + str(iy) + '\n')
+    
+    end = time.time()
+    print(f'Time to complete: {end-start} s')
