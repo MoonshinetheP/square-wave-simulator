@@ -104,7 +104,10 @@ class E:
         self.theta = (self.F / (self.R * self.Temp)) * (self.E - self.E0)
 
         self.K0 = (self.k0 * self.r) / self.Dmax
-        
+        if self.Explicit == True:
+            pass
+            
+    
         if self.Implicit == True:
             '''Expanding spatial grid'''         
             self.x = np.array([0])
