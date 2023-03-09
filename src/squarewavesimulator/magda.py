@@ -92,16 +92,18 @@ class EEC:
         '''Expanding spatial grid'''         
         self.lamb = 0.45
         self.dX = np.sqrt(self.dT / self.lamb)
-            
+        
         self.x = np.array([0])
         while self.x[-1] < self.Xmax:
             self.x = np.append(self.x, self.x[-1] + self.dX)
+            self.dX *= self.expansion
+
                 
         self.n = int(self.x.size)
         self.m = int(self.theta.size)
             
         self.sT = (self.Dmax * self.dt) / (self.r ** 2)
-        self.pT = (self.Dmax * self.pt) / (self.r ** 2)
+        self.pT = (self.Dmax * self.pt) / (self.r ** 2) # and maybe here I need to define some expanding time
 
         self.sn = int(abs(self.sT - self.pT) / self.dT)
         self.pn = int(self.pT / self.dT)
@@ -171,22 +173,23 @@ class EEC:
         self.negstepflux = np.array([])
 
 
-        
+        self.waveforms = time.time()
         for k in range(1, self.m + 1, 1):
             
-            if k ==2: print(f'Expected completion time: {(self.m - 1) * (time.time() - start)} seconds')
+            #if k ==2: print(f'Expected completion time: {(self.m - 1) * (time.time() - self.waveforms)} seconds')
+
             if k % 2 != 0:
                 for j in range(0, self.sn):
             
                     self.dmod_A[0] = (self.C_A[1] + self.dX  * self.K1 * np.exp((1-self.a1) * self.theta[k-1])) / (1 + self.dX * self.K1 * (np.exp((-self.a1) * self.theta[k-1]) + np.exp((1-self.a1) * self.theta[k - 1])))
                     
-                    self.dmod_B[0] = (self.C_B[1] + self.dX  * self.K1 * np.exp((-self.a1) * self.theta[k-1])) / (1 + self.dX * self.K1 * (np.exp((1-self.a1) * self.theta[k-1]) + np.exp((-self.a1) * self.theta[k - 1])))
+                    self.dmod_B[0] = (self.C_B[1] + self.dX  * self.K1 * np.exp((-self.a1) * self.theta[k-1])) / (1 + self.dX * self.K1 * (np.exp((1-self.a1) * self.theta[k-1]) + np.exp((-self.a1) * self.theta[k - 1]))) + (self.C_B[1] + self.dX  * self.K2 * np.exp((1-self.a2) * (self.theta[k-1] - self.gap))) / (1 + self.dX * self.K2 * (np.exp((-self.a2) * (self.theta[k-1] - self.gap)) + np.exp((1-self.a2) * (self.theta[k-1] - self.gap))))
                     
                     self.dmod_C[0] = (self.C_C[1] + self.dX  * self.K2 * np.exp((1-self.a2) * (self.theta[k-1] - self.gap))) / (1 + self.dX * self.K2 * (np.exp((-self.a2) * (self.theta[k-1] - self.gap)) + np.exp((1-self.a2) * (self.theta[k - 1]) - self.gap)))
                     
                     self.dmod_D[0] = 0
 
-                    for x in range(1, self.n - 1):  
+                    for x in range(1, self.n - 1):  #I probably need to edit these to deal with expanding grid
                         self.dmod_A[x] = self.lamb*self.C_A[x - 1] + (1 - 2*self.lamb)*self.C_A[x] + self.lamb*self.C_A[x + 1]
                         self.dmod_B[x] = self.lamb*self.C_B[x - 1] + (1 - 2*self.lamb)*self.C_B[x] + self.lamb*self.C_B[x + 1]
                         self.dmod_C[x] = self.lamb*self.C_C[x - 1] + (1 - 2*self.lamb)*self.C_C[x] + self.lamb*self.C_C[x + 1]
@@ -242,15 +245,17 @@ class EEC:
             
             self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cA * self.DA) * (-(-self.C_A[2] + 4*self.C_A[1] - 3*self.C_A[0]) / (2 * self.dX)) - (self.F * np.pi * self.r * self.cB * self.DB) * (-(-self.C_B[2] + 4*self.C_B[1]- 3*self.C_B[0]) / (2*self.dX)) - (self.F * np.pi * self.r * self.cC * self.DC) * (-(-self.C_C[2] + 4*self.C_C[1]- 3*self.C_C[0]) / (2*self.dX)))
             
-            print(f'{k} out of {self.theta.size}')
+            #print(f'{k} out of {self.theta.size}')
 
         self.negsimplified = zip(self.negsteppotential, self.negstepflux)
         self.possimplified = zip(self.possteppotential, self.posstepflux)
         self.detailed = zip(self.potential, self.flux)
         self.all = zip(self.potential, self.flux, self.possteppotential, self.posstepflux, self.negsteppotential, self.negstepflux)
-        
+        self.simend = time.time()
     def results(self):
         return self.all
+    def time(self):
+        return self.simend - self.waveforms
     
 
 if __name__ == '__main__':
@@ -267,14 +272,23 @@ if __name__ == '__main__':
         else: 
             raise
     
-    iterables = [0.01]
-    for ix in iterables:
-        shape = wf.SWV(Eini = 0, Efin = 1, dEs = 0.002, dEp = 0.05, dt = 0.04, pt = 0.02, sp = 7550)
-        instance = EEC(input = shape, E0A = 0.25, E0B = 0.5, k1 = 0.0001, k2 = 10, k3 = 10, a1 = 0.5, a2 = 0.5, cA = 0.005, cB = 0.000, cC = 0.000, cD = 0.000, DA = 5E-6, DB = 5E-6, DC = 5E-6, DD = 5E-6, r = 0.15, h = 1E-4, expansion = 1.05)
-        filepath = cwd + '/data/' + 'test BV' + str(ix) + '.txt'
-        with open(filepath, 'w') as file:
-            for ix, iy, iz, jx, jy, jz in instance.results():
-                file.write(str(ix) + ',' + str(iy) + ',' + str(iz) +',' + str(jx) +',' + str(jy) +',' + str(jz) + '\n')
+    k1_values = [0.1,1,10]
+    k2_values = [0.1,1,10]
+    k3_values = [0.1, 1, 10]
+    number = 0
+    
+    shape = wf.SWV(Eini = 0, Efin = 0.5, dEs = 0.002, dEp = 0.05, dt = 0.04, pt = 0.02, sp = 350)
 
+    for ix in k1_values:
+        for iy in k2_values:
+            for iz in k3_values:
+                
+                instance = EEC(input = shape, E0A = 0.25, E0B = 0.25, k1 = ix, k2 = iy, k3 = iz, a1 = 0.5, a2 = 0.5, cA = 0.005, cB = 0.000, cC = 0.000, cD = 0.000, DA = 5E-6, DB = 5E-6, DC = 5E-6, DD = 5E-6, r = 0.15, h = 1E-4, expansion = 1.05)
+                filepath = cwd + '/data/' + 'test K1 ' + str(ix) + 'test K2 ' + str(iy)+ 'test K3 ' + str(iz) + '.txt'
+                with open(filepath, 'w') as file:
+                    for ix, iy, iz, jx, jy, jz in instance.results():
+                        file.write(str(ix) + ',' + str(iy) + ',' + str(iz) +',' + str(jx) +',' + str(jy) +',' + str(jz) + '\n')
+                number += 1
+                print(f'Completed: {number} out of {len(k1_values) * len(k2_values) * len(k3_values)}. Remaining time estimated: {(len(k1_values) * len(k2_values) * len(k3_values) - number) * (instance.time())} seconds')
     end = time.time()
     print(end-start)
