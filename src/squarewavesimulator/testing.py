@@ -91,19 +91,20 @@ class E:
         self.beta = np.ones(self.n)
         self.gamma = np.ones(self.n - 1)
             
-        if self.expansion == 1:
-            self.alpha *= (self.dX ** 2)
-            self.beta *= (self.dX ** 2)
-            self.gamma *= (self.dX ** 2)
+        if self.expansion == 1.0:
+            self.alpha *= 1 / (self.dX ** 2)
+            self.beta *= -2 / (self.dX ** 2)
+            self.gamma *= 1 / (self.dX ** 2)
 
         if self.expansion != 1:           
             for ix in range(1, self.n - 1):
                 self.xplus = self.x[ix + 1] - self.x[ix]
                 self.xminus = self.x[ix] - self.x[ix - 1]
                 self.denominator = self.xminus * (self.xplus ** 2) + self.xplus * (self.xminus **2)
-                self.alpha[ix] *= 2 * self.xminus / self.denominator
+                self.alpha[ix - 1] *= 2 * self.xplus / self.denominator
                 self.beta[ix] *= -2 * (self.xminus + self.xplus) / self.denominator
                 self.gamma[ix] *= 2 * self.xminus / self.denominator
+            
 
         A = diagonals([self.alpha, self.beta, self.gamma], [-1,0,1]).toarray()
         A[0,:] = np.zeros(self.n)
@@ -122,7 +123,7 @@ class E:
             self.C[1:-1, k] = integrator.y[1:-1, 0]
 
                             
-            self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cA * self.DA) * (-(self.C[1, k] - self.C[0, k]) / (self.x[1] - self.x[0])))
+            self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cA * self.DA) * ((self.C[1, k] - self.C[0, k]) / (self.x[1] - self.x[0]))) # did I save flux properly, or is something still wrong with BV?
 
         self.output = zip(self.E, self.flux)
         self.simend = time.time()
@@ -145,7 +146,7 @@ if __name__ == '__main__':
             raise
     
     shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0.0, dE = 0.002,sr = 0.1, ns = 1)
-    instance = E(input = shape, E0 = 0.25, k0 = 10, a = 0.5, cA = 0.005, cB = 0.000, DA = 5E-6, DB = 5E-6, r = 0.15, h = 1E-4, expansion = 1.0)
+    instance = E(input = shape, E0 = 0.25, k0 = 0.01, a = 0.5, cA = 0.005, cB = 0.000, DA = 5E-6, DB = 5E-6, r = 0.15, h = 1E-4, expansion = 1.05)
     
     filepath = cwd + '/data/' + 'test K1 ' + '.txt'
     with open(filepath, 'w') as file:
