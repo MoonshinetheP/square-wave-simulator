@@ -74,7 +74,7 @@ class E:
         self.K0 = (self.k0 * self.r) / self.Dmax
         
         '''Expanding spatial grid'''                 
-        self.dX = np.sqrt(2 * self.dT)
+        self.dX = np.sqrt(2.05 * self.dT)
         self.x = np.array([0])
         while self.x[-1] < self.Xmax:
             self.x = np.append(self.x, self.x[-1] + self.dX)
@@ -97,6 +97,8 @@ class E:
             self.alpha[ix - 1] *= 2 * self.xplus / self.denominator
             self.beta[ix] *= -2 * (self.xminus + self.xplus) / self.denominator
             self.gamma[ix] *= 2 * self.xminus / self.denominator
+            #could fix this up so it is making proper matrix
+        
             
 
         A = diagonals([self.alpha, self.beta, self.gamma], [-1,0,1]).toarray()
