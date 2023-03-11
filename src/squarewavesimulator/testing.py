@@ -13,7 +13,7 @@ class E:
     """Simulation of an E mechanism using solving from scipy \n
     E: A -> B + e"""
 
-    def __init__(self, input, E0, k0, a, cA, cB, DA, DB, r, h, expansion):
+    def __init__(self, input, E0, k0, a, cA, cB, DA, DB, r, expansion):
         '''Waveform variables'''
         self.input = input
         self.index = self.input.index
@@ -42,7 +42,6 @@ class E:
 
         '''Spatial grid variables'''
         self.r = r
-        self.h = h
         self.expansion = expansion
 
         '''Dimensionless variables''' 
@@ -64,8 +63,6 @@ class E:
         self.dB = self.DB / self.Dmax     
         self.d = self.Dmax / self.Dmax
 
-        self.dX = self.h / self.r
-
         self.T = (self.Dmax * self.t) / (self.r ** 2)
         self.dT = self.T[1] - self.T[0]      
         self.Tmax = self.T[-1] 
@@ -77,6 +74,7 @@ class E:
         self.K0 = (self.k0 * self.r) / self.Dmax
         
         '''Expanding spatial grid'''                 
+        self.dX = np.sqrt(2 * self.dT)
         self.x = np.array([0])
         while self.x[-1] < self.Xmax:
             self.x = np.append(self.x, self.x[-1] + self.dX)
@@ -91,19 +89,14 @@ class E:
         self.beta = np.ones(self.n)
         self.gamma = np.ones(self.n - 1)
             
-        if self.expansion == 1.0:
-            self.alpha *= 1 / (self.dX ** 2)
-            self.beta *= -2 / (self.dX ** 2)
-            self.gamma *= 1 / (self.dX ** 2)
-
-        if self.expansion != 1:           
-            for ix in range(1, self.n - 1):
-                self.xplus = self.x[ix + 1] - self.x[ix]
-                self.xminus = self.x[ix] - self.x[ix - 1]
-                self.denominator = self.xminus * (self.xplus ** 2) + self.xplus * (self.xminus **2)
-                self.alpha[ix - 1] *= 2 * self.xplus / self.denominator
-                self.beta[ix] *= -2 * (self.xminus + self.xplus) / self.denominator
-                self.gamma[ix] *= 2 * self.xminus / self.denominator
+          
+        for ix in range(1, self.n - 1):
+            self.xplus = self.x[ix + 1] - self.x[ix]
+            self.xminus = self.x[ix] - self.x[ix - 1]
+            self.denominator = self.xminus * (self.xplus ** 2) + self.xplus * (self.xminus **2)
+            self.alpha[ix - 1] *= 2 * self.xplus / self.denominator
+            self.beta[ix] *= -2 * (self.xminus + self.xplus) / self.denominator
+            self.gamma[ix] *= 2 * self.xminus / self.denominator
             
 
         A = diagonals([self.alpha, self.beta, self.gamma], [-1,0,1]).toarray()
@@ -146,7 +139,7 @@ if __name__ == '__main__':
             raise
     
     shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0.0, dE = 0.002,sr = 0.1, ns = 1)
-    instance = E(input = shape, E0 = 0.25, k0 = 0.01, a = 0.5, cA = 0.005, cB = 0.000, DA = 5E-6, DB = 5E-6, r = 0.15, h = 1E-4, expansion = 1.05)
+    instance = E(input = shape, E0 = 0.25, k0 = 0.01, a = 0.5, cA = 0.005, cB = 0.000, DA = 5E-6, DB = 5E-6, r = 0.15, expansion = 1.05)
     
     filepath = cwd + '/data/' + 'test K1 ' + '.txt'
     with open(filepath, 'w') as file:
