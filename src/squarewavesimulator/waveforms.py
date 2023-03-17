@@ -534,19 +534,21 @@ class NPV(pulse):
         self.tmax = self.dp * self.dt
 
         '''INDEX'''
-        self.index = np.arange(0, ((self.sp * self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
+        self.index = np.arange(0, (self.tmax + self.dt) / self.dt, 1, dtype = np.int32)
 
         '''TIME'''
-        self.t = (self.index / self.sp) * self.dt
+        self.t = self.index * self.dt
 
         '''POTENTIAL'''
         self.E = np.array([self.Eini])
         for ix in range(1, self.dp + 1):
             if ix != self.dp:
-                self.E = np.append(self.E, square(2 * np.pi * (1/self.dt) * self.t[self.sp * (ix):(self.sp * (ix + 1))], duty = self.pt/self.dt) *(0.5 * ix * self.dEs) + (0.5 * ix * self.dEs))
+                self.E = np.append(self.E, square(2 * np.pi * (1/self.dt) * self.t[ix:ix + 1], duty = self.pt/self.dt) *(0.5 * ix * self.dEs) + (0.5 * ix * self.dEs))
+                self.E = np.append(self.E, self.Eini)
             else:
-                self.E = np.append(self.E, square(2 * np.pi * (1/self.dt) * self.t[self.sp * (ix - 1):(self.sp * (self.dp))], duty = self.pt/self.dt) *(0.5 * self.dp * self.dEs) + (0.5 * self.dp * self.dEs))
-
+                self.E = np.append(self.E, square(2 * np.pi * (1/self.dt) * self.t[ix - 1:self.dp], duty = self.pt/self.dt) *(0.5 * self.dp * self.dEs) + (0.5 * self.dp * self.dEs))
+                self.E = np.append(self.E, self.Eini)
+                
 
 """HYBRID CLASSES"""
 class CSV(hybrid):
@@ -655,7 +657,7 @@ if __name__ == '__main__':
             raise
     filepath = cwd + '/data/' + 'waveform.txt'
 
-    wf = LSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.002, sr = 0.1, ns = 1)
+    wf = NPV(Eini = 0, Efin = 0.5, dEs = 0.002, dEp = 0.05, dt = 0.005, pt = 0.005)
 
     with open(filepath, 'w') as file:
         for ix, iy, iz in wf.output():

@@ -266,11 +266,11 @@ if __name__ == '__main__':
         else: 
             raise
     
-    iterables = [0.01]
+    iterables = [1000]
     for ix in iterables:
-        shape = wf.CV(Eini = 0.5, Eupp = 0.5, Elow = 0, dE = -0.001, sr = 0.1, ns = 1)
-        instance = E(input = shape, E0 = 0.25, k0 = ix, a = 0.5, cA = 0.005, cB = 0.000, DA = 5E-6, DB = 5E-6, r = 0.15, h = 1E-4, expansion = 1.05, Explicit = True, BV = True)
-        filepath = cwd + '/data/' + 'test BV' + str(ix) + '.txt'
+        shape = wf.CV(Eini = 0.5, Eupp = 0.5, Elow = -0.25, dE = -0.005, sr = 0.1, ns = 1)
+        instance = E(input = shape, E0 = 0.25, E1 = 0, k0 = 1, k1 = 1, a0 = 0.5, a1 = 0.5, cA = 0.005, cB = 0.000, cC = 0.000, DA = 5E-6, DB = 5E-6, DC = 5E-6, r = 0.15, h = 1E-4, expansion = 1.05)
+        filepath = cwd + '/data/' + 'test EE' + str(ix) + '.txt'
         with open(filepath, 'w') as file:
             for ix, iy in instance.results():
                 file.write(str(ix) + ',' + str(iy) + '\n')
