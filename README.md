@@ -1,2 +1,2 @@
-# square-wave-simulator
-An attempt to make a script which can simulate square wave voltammetry.
+# electrochemistry-simulations
+Scripts for simulating various electrochemical techniques and mechanisms
