@@ -362,6 +362,8 @@ class LSV(sweep):
     def __init__(self,Eini, Eupp, Elow, dE, sr, ns):
         super().__init__(Eini, Eupp, Elow, dE, sr, ns)
 
+        self.subtype = 'LSV'
+
         if self.Elow < self.Eini < self.Eupp:
             print('\n' + 'Initial potential should be equal to either upper vertex or lower vertex potential in LSV' + '\n')
             sys.exit()
@@ -413,7 +415,7 @@ class CV(sweep):
         super().__init__(Eini, Eupp, Elow, dE, sr, ns)
 
         self.subtype = 'CV'
-        
+
         '''STARTING FROM LOWER VERTEX POTENTIAL''' 
         if self.Eini == self.Elow:                
             self.window = np.abs(self.Eupp - self.Elow)
@@ -503,6 +505,8 @@ class CA(step):
     def __init__(self, dE, dt):
         super().__init__(dE, dt)
 
+        self.subtype = 'step'
+
         '''SINGLE STEP CHRONOAMPEROMMETRY'''
         if self.multiple is False:
             '''INDEX'''
@@ -531,6 +535,8 @@ class DPV(pulse):
     '''Waveform for differential pulse voltammetry'''
     def __init__(self, Eini, Efin, dEs, dEp, pt, rt, st, detailed):
         super().__init__(Eini, Efin, dEs, dEp, pt, rt, st, detailed)
+
+        self.subtype = 'DPV'
 
         if 2 * self.pt == self.rt:
             print('\n' + 'Wouldn\'t you rather be using square wave voltammetry?' + '\n')
@@ -584,6 +590,8 @@ class SWV(pulse):
     def __init__(self, Eini, Efin, dEs, dEp, pt, rt, st, detailed):
         super().__init__(Eini, Efin, dEs, dEp, pt, rt, st, detailed)
 
+        self.subtype = 'SWV'
+
         if 2 * self.pt != self.dt:
             print('\n' + 'Wouldn\'t you rather be using differential pulse voltammetry?' + '\n')
             sys.exit()       
@@ -611,7 +619,9 @@ class NPV(pulse):
     '''Waveform for normal pulse voltammetry'''
     def __init__(self, Eini, Efin, dEs, dEp, dt, pt):
         super().__init__(Eini, Efin, dEs, dEp, dt, pt)
-       
+
+        self.subtype = 'NPV'
+
         self.window = np.abs(self.Efin - self.Eini)
         self.dp = int(self.window / np.abs(self.dEs))
         self.tmax = self.dp * self.dt
@@ -639,6 +649,8 @@ class CSV(hybrid):
     def __init__(self, Eini, Eupp, Elow, dE, sr, ns):
         super().__init__(Eini, Eupp, Elow, dE, sr, ns)
         
+        self.subtype = 'CSV'
+
         '''STARTING FROM LOWER VERTEX POTENTIAL''' 
         if self.Eini == self.Elow:                
             self.window = np.abs(self.Eupp - self.Elow)
