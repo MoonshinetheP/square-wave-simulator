@@ -8,6 +8,10 @@ import matplotlib.animation as animation
 
 import waveforms as wf
 import E
+import ECprime
+import EE
+import EandE
+import EC
 
 
 if __name__ == '__main__':
@@ -32,17 +36,15 @@ if __name__ == '__main__':
             raise
     
     '''SIMULATION'''
-    shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
-    #shape = wf.DPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.01, pt = 0.01, rt = 0.03, st = 0.001, detailed = False)
-    
-    instance = E.E(input = shape, E0 = 0.25, k0 = 0.1, a = 0.5, cR = 0.005, cO = 0.000, DR = 5E-6, DO = 5E-6, r = 0.15, expansion = 1.05, Nernstian = False, BV = True, MH = False)
+    shape = wf.CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.0001, detailed = True)
+    instance = E.E(input = shape, E0 = 0.25, k0 = 10, a = 0.5, cR = 0.005, cO = 0.000, DR = 5E-6, DO = 5E-6, r = 0.15, expansion = 1.05, Nernstian = False, BV = True, MH = False)
     
     end = time.time()
     print(f'The simulation took {end-start} seconds to complete')
 
 
     '''SAVE DATA'''
-    filepath = f'{cwd}/data/{shape.type} {shape.subtype}.txt'
+    filepath = f'{cwd}/data/{shape.type} {shape.subtype} 0.005.txt'
     with open(filepath, 'w') as file:
         for ix, iy, iz in instance.results():
             file.write(str(ix) + ',' + str(iy) + ',' + str(iz) + '\n')
@@ -74,13 +76,13 @@ if __name__ == '__main__':
         return left, 
 
     def current(i):
-        right.set_data(instance.EPLOT[:i], instance.flux[:i])
+        right.set_data(instance.E[:i], instance.flux[:i])
         return right,
 
 
     '''ANIMATION'''
     Evt = animation.FuncAnimation(fig, potential, frames = shape.indexWF.size, interval = 1, repeat = False, blit = True) 
-    ivE = animation.FuncAnimation(fig, current, frames = instance.tPLOT.size, interval = 1 * (shape.indexWF.size / instance.tPLOT.size), repeat = False, blit = True)
+    ivE = animation.FuncAnimation(fig, current, frames = instance.t.size, interval = 1 * (shape.indexWF.size / instance.t.size), repeat = False, blit = True)
     
     plt.show()
     plt.close()
