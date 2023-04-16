@@ -217,7 +217,7 @@ class pulse:
     
 class hybrid:
     '''Parent class for all waveforms composed of both steps and sweeps'''
-    def __init__(self, Eini, Eupp, Elow, dE, sr, ns):
+    def __init__(self, Eini, Eupp, Elow, dE, sr, ns, st, detailed):
 
         self.type = 'hybrid'
 
@@ -227,6 +227,9 @@ class hybrid:
         self.dE = dE            # Step size for sweeping step techniques
         self.sr = sr            # Scan rate for sweeping step techniques
         self.ns = ns            # Number of scans for cyclic staircase voltammetry
+        self.st = st            # Sampling time
+
+        self.detailed = detailed
 
         '''DATATYPE ERRORS'''
         if isinstance(self.Eini, (float, int)) is False:
@@ -241,15 +244,19 @@ class hybrid:
         if isinstance(self.dE, (float)) is False:
             print('\n' + 'An invalid datatype was used for the step potential. Enter a float value corresponding to a potential in V.' + '\n')
             sys.exit()    
-        if isinstance(self.sp, (int)) is False:
-            print('\n' + 'An invalid datatype was used for the number of data points in a step. Enter an integer value.' + '\n')
-            sys.exit()
         if isinstance(self.sr, (float, int)) is False:
             print('\n' + 'An invalid datatype was used for the scan rate. Enter a float or an integer value corresponding to the scan rate in V/s.' + '\n')
             sys.exit() 
         if isinstance(self.ns, (int)) is False:
             print('\n' + 'An invalid datatype was used for the number of scans. Enter an integer value corresponding to the scan rate in V/s.' + '\n')
             sys.exit() 
+        if isinstance(self.st, (float, int)) is False:
+            print('\n' + 'An invalid datatype was used for the sampling time. Enter either a float or an integer value corresponding to a time in s.' + '\n')
+            sys.exit()
+        if isinstance(self.detailed, (bool)) is False:
+            print('\n' + 'An invalid datatype was used for the detailed argument. Enter either True or False.' + '\n')
+            sys.exit()
+
 
         '''DATA VALUE ERRORS'''
         if self.Eupp == self.Elow:
@@ -278,6 +285,9 @@ class hybrid:
             sys.exit()    
         if self.ns <=0:
             print('\n' + 'Number of scans must be a positive non-zero value' + '\n')
+            sys.exit()
+        if self.st <= 0:
+            print('\n' + 'Sampling time must be a positive non-zero value' + '\n')
             sys.exit()
     
     def output(self):
@@ -505,7 +515,7 @@ class CA(step):
     def __init__(self, dE, dt):
         super().__init__(dE, dt)
 
-        self.subtype = 'step'
+        self.subtype = 'CA'
 
         '''SINGLE STEP CHRONOAMPEROMMETRY'''
         if self.multiple is False:
@@ -528,6 +538,16 @@ class CA(step):
             
             '''POTENTIAL'''
             self.E = self.dE.toarray()
+        
+        
+        '''PLOTTING WAVEFORM'''
+        self.tPLOT = self.t
+        self.EPLOT = self.E
+
+        '''EXPORTED WAVEFORM'''
+        self.indexWF = self.index
+        self.tWF = self.t        
+        self.EWF = self.E
 
 
 """PULSE CLASSES"""
@@ -646,8 +666,8 @@ class NPV(pulse):
 """HYBRID CLASSES"""
 class CSV(hybrid):
     '''Waveform for cyclic staircase voltammetry'''
-    def __init__(self, Eini, Eupp, Elow, dE, sr, ns):
-        super().__init__(Eini, Eupp, Elow, dE, sr, ns)
+    def __init__(self, Eini, Eupp, Elow, dE, sr, ns, st, detailed):
+        super().__init__(Eini, Eupp, Elow, dE, sr, ns, st, detailed)
         
         self.subtype = 'CSV'
 
@@ -657,41 +677,41 @@ class CSV(hybrid):
             self.dp = int(self.window / np.abs(self.dE))
             self.tmax = (2 * self.ns * self.window) / self.sr
             self.dt = np.abs(self.dE) / self.sr
+            self.sp = int(self.dt / self.st)
 
             '''INDEX'''
-            self.index = np.arange(0, self.sp * ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
+            self.index = np.arange(0, ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
         
             '''TIME'''
-            self.t = (self.index / self.sp) * self.dt
+            self.t = self.index * self.dt
             
             '''POTENTIAL'''
-            self.E = np.ones([self.sp]) * self.Eini
+            self.E = np.array([self.Eini])
             for ix in range(0, self.ns):
-                for iy in range(1, self.dp + 1):
-                    self.E = np.append(self.E, np.ones(self.sp) * (self.Elow + self.dE * iy))
-                for iz in range(1, self.dp + 1):
-                    self.E = np.append(self.E, np.ones(self.sp) * (self.Eupp - self.dE * iz))
+                self.E = np.append(self.E, np.linspace(self.Eini + self.dE, self.Eupp, self.dp, endpoint = True, dtype = np.float32))
+                self.E = np.append(self.E, np.linspace(self.Eupp - self.dE, self.Eini, self.dp, endpoint = True, dtype = np.float32))
 
+    
         '''STARTING FROM UPPER VERTEX POTENTIAL'''
         if self.Eini == self.Eupp:     
             self.window = np.abs(self.Eupp - self.Elow)
             self.dp = int(self.window / np.abs(self.dE))
             self.tmax = (2 * self.ns * self.window) / self.sr
             self.dt = np.abs(self.dE) / self.sr
+            self.sp = int(self.dt / self.st)
 
             '''INDEX'''
-            self.index = np.arange(0, self.sp * ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
+            self.index = np.arange(0, ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
         
             '''TIME'''
-            self.t = (self.index / self.sp) * self.dt
+            self.t = self.index * self.dt
             
             '''POTENTIAL'''
-            self.E = np.ones([self.sp]) * self.Eini
+            self.E = np.array([self.Eini])
             for ix in range(0, self.ns):
-                for iy in range(1, self.dp +1):
-                    self.E = np.append(self.E, np.ones(self.sp) * (self.Eupp + self.dE * iy))
-                for iz in range(1, self.dp +1):
-                    self.E = np.append(self.E, np.ones(self.sp) * (self.Elow  - self.dE * iz))
+                self.E = np.append(self.E, np.linspace(self.Eini + self.dE, self.Elow, self.dp, endpoint = True, dtype = np.float32))
+                self.E = np.append(self.E, np.linspace(self.Elow - self.dE, self.Eini, self.dp, endpoint = True, dtype = np.float32))
+
 
         '''STARTING IN BETWEEN VERTEX POTENTIALS'''
         if self.Elow < self.Eini < self.Eupp:        
@@ -703,34 +723,40 @@ class CSV(hybrid):
             self.lowdp = int(self.lowwindow / np.abs(self.dE))
             self.tmax = self.ns * (self.uppwindow + self.window + self.lowwindow) / self.sr
             self.dt = np.abs(self.dE) / self.sr
+            self.sp = int(self.dt / self.st)
 
             '''INDEX'''
-            self.index = np.arange(0, self.sp * ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
+            self.index = np.arange(0, ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
         
             '''TIME'''
-            self.t = (self.index / self.sp) * self.dt
+            self.t = self.index * self.dt
             
             '''POTENTIAL WITH POSITIVE SCAN DIRECTION'''
-            if dE > 0:
+            if self.dE > 0:
                 self.E = np.array([self.Eini])
                 for ix in range(0, self.ns):
-                    for iy in range(1, self.uppdp +1):
-                        self.E = np.append(self.E, np.ones(self.sp) * (self.Eini + self.dE * iy))
-                    for iw in range(1, self.dp + 1):
-                        self.E = np.append(self.E, np.ones(self.sp) * (self.Eupp  - self.dE * iw))
-                    for iz in range(1, self.lowdp +1):
-                        self.E = np.append(self.E, np.ones(self.sp) * (self.Elow  + self.dE * iz))
-                    
+                    self.E = np.append(self.E, np.linspace(self.Eini + self.dE, self.Eupp, self.uppdp, endpoint = True, dtype = np.float32))
+                    self.E = np.append(self.E, np.linspace(self.Eupp - self.dE, self.Elow, self.dp, endpoint = True, dtype = np.float32))
+                    self.E = np.append(self.E, np.linspace(self.Elow + self.dE, self.Eini, self.lowdp, endpoint = True, dtype = np.float32))
+
             '''POTENTIAL WITH NEGATIVE SCAN DIRECTION'''
-            if dE < 0:
+            if self.dE < 0:
                 self.E = np.array([self.Eini])
                 for ix in range(0, self.ns):
-                    for iy in range(1, self.lowdp +1):
-                        self.E = np.append(self.E, np.ones(self.sp) * (self.Eini + self.dE * iy))
-                    for iw in range(1, self.dp + 1):
-                        self.E = np.append(self.E, np.ones(self.sp) * (self.Elow  - self.dE * iw))
-                    for iz in range(1, self.uppdp +1):
-                        self.E = np.append(self.E, np.ones(self.sp) * (self.Eupp  + self.dE * iz))
+                    self.E = np.append(self.E, np.linspace(self.Eini - self.dE, self.Elow, self.lowdp, endpoint = True, dtype = np.float32))
+                    self.E = np.append(self.E, np.linspace(self.Elow + self.dE, self.Elow, self.dp, endpoint = True, dtype = np.float32))
+                    self.E = np.append(self.E, np.linspace(self.Elow + self.dE, self.Eini, self.uppdp, endpoint = True, dtype = np.float32))
+        
+        '''PLOTTING WAVEFORM'''
+        self.tPLOT = self.t
+        self.EPLOT = self.E
+
+        '''EXPORTED WAVEFORM'''
+        self.indexWF = np.arange(0, ((self.sp * (self.tmax + self.dt))  / self.dt) + 1, 1, dtype = np.int32)
+        self.tWF = (self.indexWF * self.dt) / self.sp        
+        self.EWF = np.array([0])
+        for ix in range(0, self.E.size, 1):
+            self.EWF = np.append(self.EWF, np.ones((self.sp)) * self.E[ix])
 
 class AC(hybrid):
     pass
@@ -753,7 +779,7 @@ if __name__ == '__main__':
             raise
     filepath = cwd + '/data/' + 'waveform.txt'
 
-    wf = DPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.01, pt = 0.005, rt = 0.015, st = 0.0001, detailed = False)
+    wf = CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.005, sr = 0.1, ns = 1, st = 0.0001, detailed = False)
 
     with open(filepath, 'w') as file:
         for ix, iy, iz in wf.output():
