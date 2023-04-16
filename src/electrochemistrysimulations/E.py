@@ -42,6 +42,15 @@ class E:
             self.st = self.input.st
             self.detailed = self.input.detailed
 
+        if self.input.type == 'hybrid':
+            self.Eini = self.input.Eini
+            self.Eupp = self.input.Eupp
+            self.Elow = self.input.Elow
+            self.dE = self.input.dE
+            self.sr = self.input.sr
+            self.ns = self.input.ns
+            self.st = self.input.st
+            self.detailed = self.input.detailed
 
         
         '''Mechanism variables'''
@@ -189,6 +198,9 @@ class E:
                 if k % 2 == 0:
                     self.fluxminus = np.append(self.fluxminus, (self.F * np.pi * self.r * self.cR * self.DR) * ((self.C_R[1, k] - self.C_R[0, k]) / (self.x[1] - self.x[0])) - (self.F * np.pi * self.r * self.cO * self.DO) * ((self.C_O[1, k] - self.C_O[0, k]) / (self.x[1] - self.x[0])))
 
+            if self.input.type == 'hybrid':
+                self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cR * self.DR) * ((self.C_R[1, k] - self.C_R[0, k]) / (self.x[1] - self.x[0])) - (self.F * np.pi * self.r * self.cO * self.DO) * ((self.C_O[1, k] - self.C_O[0, k]) / (self.x[1] - self.x[0])))
+        
         if self.input.type == 'pulse':
             self.flux = self.fluxplus - self.fluxminus
 
@@ -211,7 +223,7 @@ if __name__ == '__main__':
         else: 
             raise
     
-    shape = wf.DPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.01, pt = 0.01, rt = 0.03, st = 0.000001, detailed = False)
+    shape = wf.CV(Eini = 0.0, Eupp = 0.5, Elow = 0.0, dE = 0.001, sr = 0.01, ns = 1)
     instance = E(input = shape, E0 = 0.25, k0 = 0.1, a = 0.5, cR = 0.005, cO = 0.000, DR = 5E-6, DO = 5E-6, r = 0.15, expansion = 1.05, Nernstian = False, BV = True, MH = False)
     
     filepath = cwd + '/data/' + 'pulse' + '.txt'
