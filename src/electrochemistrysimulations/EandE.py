@@ -240,7 +240,7 @@ if __name__ == '__main__':
     shape = wf.CV(Eini = 0.0, Eupp = 1.0, Elow = 0.0, dE = 0.002, sr = 0.01, ns = 1)
     instance = TwoE(input = shape, E0 = 0.25, k0 = 0.1, a0 = 0.5, E1 = 0.75, k1 = 0.1, a1 = 0.5, cR = 0.005, cO = 0.000, cX = 0.005, cY = 0.000, DR = 5E-6, DO = 5E-6, DX = 5E-6, DY = 5E-6, r = 0.15, expansion = 1.05, Nernstian = False, BV = True, MH = False)
     
-    filepath = cwd + '/data/' + 'EE' + '.txt'
+    filepath = cwd + '/data/' + 'E+E' + '.txt'
     with open(filepath, 'w') as file:
         for ix, iy, iz in instance.results():
             file.write(str(ix) + ',' + str(iy) + ',' + str(iz) + '\n')
