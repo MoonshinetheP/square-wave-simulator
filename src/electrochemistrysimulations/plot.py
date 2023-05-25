@@ -32,7 +32,7 @@ if __name__ == '__main__':
             raise
     
     '''SIMULATION'''
-    shape = wf.CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.001, detailed = True)
+    shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
     #shape = wf.DPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.01, pt = 0.01, rt = 0.03, st = 0.001, detailed = False)
     
     instance = E.E(input = shape, E0 = 0.25, k0 = 0.1, a = 0.5, cR = 0.005, cO = 0.000, DR = 5E-6, DO = 5E-6, r = 0.15, expansion = 1.05, Nernstian = False, BV = True, MH = False)
@@ -49,7 +49,8 @@ if __name__ == '__main__':
     
 
     '''PLOT GENERATION'''
-    fig, (ax1, ax2) = plt.subplots(1,2, figsize=(12, 5))
+    fig, (ax1, ax2) = plt.subplots(1,2, figsize = (12, 5))
+    fig.tight_layout(pad = 5)
     left, = ax1.plot(shape.tWF, shape.EWF, linewidth = 1, linestyle = '-', color = 'blue', marker = None, label = None, visible = True)
     right, = ax2.plot(instance.EPLOT, instance.flux, linewidth = 1, linestyle = '-', color = 'red', marker = None, label = None, visible = True)
 
