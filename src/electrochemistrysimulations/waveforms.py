@@ -420,7 +420,15 @@ class LSV(sweep):
         self.EWF = self.E
 
 class CV(sweep):
-    '''Waveform for cyclic voltammetry'''
+    '''Waveform for cyclic voltammetry \n
+    \n
+    Eini - start potential \n
+    Eupp - upper vertex potential \n
+    Elow - lower vertex potential \n
+    dE   - step size (in this case, number of data points) \n
+    sr   - scan rate \n
+    ns   - number of scans'''
+
     def __init__(self, Eini, Eupp, Elow, dE, sr, ns):
         super().__init__(Eini, Eupp, Elow, dE, sr, ns)
 
@@ -428,13 +436,13 @@ class CV(sweep):
 
         '''STARTING FROM LOWER VERTEX POTENTIAL''' 
         if self.Eini == self.Elow:                
-            self.window = np.abs(self.Eupp - self.Elow)
-            self.dp = int(self.window / np.abs(self.dE))
-            self.tmax = (2 * self.ns * self.window) / self.sr
-            self.dt = np.abs(self.dE) / self.sr
+            self.window = round(self.Eupp - self.Elow, 3)
+            self.dp = round(np.abs(self.window / self.dE))
+            self.tmax = round(2 * self.ns * self.window / self.sr, 6)
+            self.dt = round(np.abs(self.dE / self.sr), 9)
 
             '''INDEX'''
-            self.index = np.arange(0, ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
+            self.index = np.arange(0, round((self.tmax + self.dt) / self.dt, 9), 1, dtype = np.int32)
         
             '''TIME'''
             self.t = self.index * self.dt
@@ -442,19 +450,19 @@ class CV(sweep):
             '''POTENTIAL'''
             self.E = np.array([self.Eini])
             for ix in range(0, self.ns):
-                self.E = np.append(self.E, np.linspace(self.Eini + self.dE, self.Eupp, self.dp, endpoint = True, dtype = np.float32))
-                self.E = np.append(self.E, np.linspace(self.Eupp - self.dE, self.Eini, self.dp, endpoint = True, dtype = np.float32))
+                self.E = np.append(self.E, np.round(np.linspace(self.Eini + self.dE, self.Eupp, self.dp, endpoint = True, dtype = np.float32), 3))
+                self.E = np.append(self.E, np.round(np.linspace(self.Eupp - self.dE, self.Eini, self.dp, endpoint = True, dtype = np.float32), 3))
 
     
         '''STARTING FROM UPPER VERTEX POTENTIAL'''
         if self.Eini == self.Eupp:     
-            self.window = np.abs(self.Eupp - self.Elow)
-            self.dp = int(self.window / np.abs(self.dE))
-            self.tmax = (2 * self.ns * self.window) / self.sr
-            self.dt = np.abs(self.dE) / self.sr
+            self.window = round(self.Eupp - self.Elow, 3)
+            self.dp = round(np.abs(self.window / self.dE))
+            self.tmax = round(2 * self.ns * self.window / self.sr, 6)
+            self.dt = round(np.abs(self.dE / self.sr), 9)
 
             '''INDEX'''
-            self.index = np.arange(0, ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
+            self.index = np.arange(0, round((self.tmax + self.dt) / self.dt, 9), 1, dtype = np.int32)
         
             '''TIME'''
             self.t = self.index * self.dt
@@ -462,23 +470,23 @@ class CV(sweep):
             '''POTENTIAL'''
             self.E = np.array([self.Eini])
             for ix in range(0, self.ns):
-                self.E = np.append(self.E, np.linspace(self.Eini + self.dE, self.Elow, self.dp, endpoint = True, dtype = np.float32))
-                self.E = np.append(self.E, np.linspace(self.Elow - self.dE, self.Eini, self.dp, endpoint = True, dtype = np.float32))
+                self.E = np.append(self.E, np.round(np.linspace(self.Eini + self.dE, self.Elow, self.dp, endpoint = True, dtype = np.float32), 3))
+                self.E = np.append(self.E, np.round(np.linspace(self.Elow - self.dE, self.Eini, self.dp, endpoint = True, dtype = np.float32), 3))
 
 
         '''STARTING IN BETWEEN VERTEX POTENTIALS'''
         if self.Elow < self.Eini < self.Eupp:        
-            self.uppwindow = np.abs(self.Eupp - self.Eini)
-            self.window = np.abs(self.Eupp - self.Elow)
-            self.lowwindow = np.abs(self.Eini - self.Elow)
-            self.uppdp = int(self.uppwindow / np.abs(self.dE))
-            self.dp = int(self.window / np.abs(self.dE))
-            self.lowdp = int(self.lowwindow / np.abs(self.dE))
-            self.tmax = self.ns * (self.uppwindow + self.window + self.lowwindow) / self.sr
-            self.dt = np.abs(self.dE) / self.sr
+            self.uppwindow = round(self.Eupp - self.Eini, 3)
+            self.window = round(self.Eupp - self.Elow, 3)
+            self.lowwindow = round(self.Eini - self.Elow, 3)
+            self.uppdp = round(np.abs(self.uppwindow / self.dE))
+            self.dp = round(np.abs(self.window / self.dE))
+            self.lowdp = round(np.abs(self.lowwindow / self.dE))
+            self.tmax = round(self.ns * (self.uppwindow + self.window + self.lowwindow) / self.sr, 6)
+            self.dt = round(np.abs(self.dE / self.sr), 9)
 
             '''INDEX'''
-            self.index = np.arange(0, ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
+            self.index = np.arange(0, round((self.tmax + self.dt) / self.dt, 9), 1, dtype = np.int32)
         
             '''TIME'''
             self.t = self.index * self.dt
@@ -487,17 +495,17 @@ class CV(sweep):
             if self.dE > 0:
                 self.E = np.array([self.Eini])
                 for ix in range(0, self.ns):
-                    self.E = np.append(self.E, np.linspace(self.Eini + self.dE, self.Eupp, self.uppdp, endpoint = True, dtype = np.float32))
-                    self.E = np.append(self.E, np.linspace(self.Eupp - self.dE, self.Elow, self.dp, endpoint = True, dtype = np.float32))
-                    self.E = np.append(self.E, np.linspace(self.Elow + self.dE, self.Eini, self.lowdp, endpoint = True, dtype = np.float32))
+                    self.E = np.append(self.E, np.round(np.linspace(self.Eini + self.dE, self.Eupp, self.uppdp, endpoint = True, dtype = np.float32), 3))
+                    self.E = np.append(self.E, np.round(np.linspace(self.Eupp - self.dE, self.Elow, self.dp, endpoint = True, dtype = np.float32), 3))
+                    self.E = np.append(self.E, np.round(np.linspace(self.Elow + self.dE, self.Eini, self.lowdp, endpoint = True, dtype = np.float32), 3))
 
             '''POTENTIAL WITH NEGATIVE SCAN DIRECTION'''
             if self.dE < 0:
                 self.E = np.array([self.Eini])
                 for ix in range(0, self.ns):
-                    self.E = np.append(self.E, np.linspace(self.Eini - self.dE, self.Elow, self.lowdp, endpoint = True, dtype = np.float32))
-                    self.E = np.append(self.E, np.linspace(self.Elow + self.dE, self.Elow, self.dp, endpoint = True, dtype = np.float32))
-                    self.E = np.append(self.E, np.linspace(self.Elow + self.dE, self.Eini, self.uppdp, endpoint = True, dtype = np.float32))
+                    self.E = np.append(self.E, np.round(np.linspace(self.Eini - self.dE, self.Elow, self.lowdp, endpoint = True, dtype = np.float32), 3))
+                    self.E = np.append(self.E, np.round(np.linspace(self.Elow + self.dE, self.Eupp, self.dp, endpoint = True, dtype = np.float32), 3))
+                    self.E = np.append(self.E, np.round(np.linspace(self.Eupp + self.dE, self.Eini, self.uppdp, endpoint = True, dtype = np.float32), 3))
             
         '''PLOTTING WAVEFORM'''
         self.tPLOT = self.t
@@ -665,7 +673,15 @@ class NPV(pulse):
 
 """HYBRID CLASSES"""
 class CSV(hybrid):
-    '''Waveform for cyclic staircase voltammetry'''
+    '''Waveform for cyclic staircase voltammetry \n   
+    \n
+    Eini - start potential \n
+    Eupp - upper vertex potential \n
+    Elow - lower vertex potential \n
+    dE   - step size \n
+    sr   - scan rate \n
+    ns   - number of scans \n
+    st   - sampling time'''
     def __init__(self, Eini, Eupp, Elow, dE, sr, ns, st, detailed):
         super().__init__(Eini, Eupp, Elow, dE, sr, ns, st, detailed)
         
@@ -673,14 +689,14 @@ class CSV(hybrid):
 
         '''STARTING FROM LOWER VERTEX POTENTIAL''' 
         if self.Eini == self.Elow:                
-            self.window = np.abs(self.Eupp - self.Elow)
-            self.dp = int(self.window / np.abs(self.dE))
-            self.tmax = (2 * self.ns * self.window) / self.sr
-            self.dt = np.abs(self.dE) / self.sr
-            self.sp = int(self.dt / self.st)
+            self.window = round(self.Eupp - self.Elow, 3)
+            self.dp = round(np.abs(self.window / self.dE))
+            self.tmax = round(2 * self.ns * self.window / self.sr, 6)
+            self.dt = round(np.abs(self.dE / self.sr), 9)
+            self.sp = round(self.dt / self.st)
 
             '''INDEX'''
-            self.index = np.arange(0, ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
+            self.index = np.arange(0, round((self.tmax + self.dt) / self.dt, 9), 1, dtype = np.int32)
         
             '''TIME'''
             self.t = self.index * self.dt
@@ -690,18 +706,19 @@ class CSV(hybrid):
             for ix in range(0, self.ns):
                 self.E = np.append(self.E, np.linspace(self.Eini + self.dE, self.Eupp, self.dp, endpoint = True, dtype = np.float32))
                 self.E = np.append(self.E, np.linspace(self.Eupp - self.dE, self.Eini, self.dp, endpoint = True, dtype = np.float32))
+            self.E = np.round(self.E, 6)
 
     
         '''STARTING FROM UPPER VERTEX POTENTIAL'''
         if self.Eini == self.Eupp:     
-            self.window = np.abs(self.Eupp - self.Elow)
-            self.dp = int(self.window / np.abs(self.dE))
-            self.tmax = (2 * self.ns * self.window) / self.sr
-            self.dt = np.abs(self.dE) / self.sr
-            self.sp = int(self.dt / self.st)
+            self.window = round(self.Eupp - self.Elow, 3)
+            self.dp = round(np.abs(self.window / self.dE))
+            self.tmax = round(2 * self.ns * self.window / self.sr, 6)
+            self.dt = round(np.abs(self.dE / self.sr), 9)
+            self.sp = round(self.dt / self.st)
 
             '''INDEX'''
-            self.index = np.arange(0, ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
+            self.index = np.arange(0, round((self.tmax + self.dt) / self.dt, 9), 1, dtype = np.int32)
         
             '''TIME'''
             self.t = self.index * self.dt
@@ -711,22 +728,23 @@ class CSV(hybrid):
             for ix in range(0, self.ns):
                 self.E = np.append(self.E, np.linspace(self.Eini + self.dE, self.Elow, self.dp, endpoint = True, dtype = np.float32))
                 self.E = np.append(self.E, np.linspace(self.Elow - self.dE, self.Eini, self.dp, endpoint = True, dtype = np.float32))
+            self.E = np.round(self.E, 6)
 
 
         '''STARTING IN BETWEEN VERTEX POTENTIALS'''
         if self.Elow < self.Eini < self.Eupp:        
-            self.uppwindow = np.abs(self.Eupp - self.Eini)
-            self.window = np.abs(self.Eupp - self.Elow)
-            self.lowwindow = np.abs(self.Eini - self.Elow)
-            self.uppdp = int(self.uppwindow / np.abs(self.dE))
-            self.dp = int(self.window / np.abs(self.dE))
-            self.lowdp = int(self.lowwindow / np.abs(self.dE))
-            self.tmax = self.ns * (self.uppwindow + self.window + self.lowwindow) / self.sr
-            self.dt = np.abs(self.dE) / self.sr
-            self.sp = int(self.dt / self.st)
+            self.uppwindow = round(self.Eupp - self.Eini, 3)
+            self.window = round(self.Eupp - self.Elow, 3)
+            self.lowwindow = round(self.Eini - self.Elow, 3)
+            self.uppdp = round(np.abs(self.uppwindow / self.dE))
+            self.dp = round(np.abs(self.window / self.dE))
+            self.lowdp = round(np.abs(self.lowwindow / self.dE))
+            self.tmax = round(self.ns * (self.uppwindow + self.window + self.lowwindow) / self.sr, 6)
+            self.dt = round(np.abs(self.dE / self.sr), 9)
+            self.sp = round(self.dt / self.st)
 
             '''INDEX'''
-            self.index = np.arange(0, ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
+            self.index = np.arange(0, round((self.tmax + self.dt) / self.dt, 9), 1, dtype = np.int32)
         
             '''TIME'''
             self.t = self.index * self.dt
@@ -744,19 +762,52 @@ class CSV(hybrid):
                 self.E = np.array([self.Eini])
                 for ix in range(0, self.ns):
                     self.E = np.append(self.E, np.linspace(self.Eini - self.dE, self.Elow, self.lowdp, endpoint = True, dtype = np.float32))
-                    self.E = np.append(self.E, np.linspace(self.Elow + self.dE, self.Elow, self.dp, endpoint = True, dtype = np.float32))
-                    self.E = np.append(self.E, np.linspace(self.Elow + self.dE, self.Eini, self.uppdp, endpoint = True, dtype = np.float32))
+                    self.E = np.append(self.E, np.linspace(self.Elow + self.dE, self.Eupp, self.dp, endpoint = True, dtype = np.float32))
+                    self.E = np.append(self.E, np.linspace(self.Eupp + self.dE, self.Eini, self.uppdp, endpoint = True, dtype = np.float32))
+            
+            self.E = np.round(self.E, 6)
         
-        '''PLOTTING WAVEFORM'''
-        self.tPLOT = self.t
-        self.EPLOT = self.E
 
+        '''PLOTTING WAVEFORM'''
+        if self.detailed == False:
+            self.tPLOT = self.t
+            self.EPLOT = self.E
+
+        if self.detailed == True:
+            self.tPLOT = np.array([])
+            for ix in range(0, self.t.size):
+                try:
+                    self.tPLOT = np.append(self.tPLOT, np.linspace(self.t[ix], self.t[ix + 1], self.sp, endpoint = False))
+                except:
+                    self.tPLOT = np.append(self.tPLOT, np.linspace(self.t[ix], self.t[ix] + self.dt, self.sp, endpoint = False))
+            self.tPLOT = np.round(self.tPLOT, 9)
+
+            self.EPLOT = np.array([])
+            for iy in range(0, self.E.size):
+                try:
+                    self.EPLOT = np.append(self.EPLOT, np.linspace(self.E[iy], self.E[iy + 1], self.sp, endpoint = False))
+                except:
+                    self.EPLOT = np.append(self.EPLOT, np.linspace(self.E[iy], self.E[iy] + self.dE, self.sp, endpoint = False))
+            self.EPLOT = np.round(self.EPLOT, 9)
+
+    
         '''EXPORTED WAVEFORM'''
-        self.indexWF = np.arange(0, ((self.sp * (self.tmax + self.dt))  / self.dt) + 1, 1, dtype = np.int32)
-        self.tWF = (self.indexWF * self.dt) / self.sp        
-        self.EWF = np.array([0])
-        for ix in range(0, self.E.size, 1):
-            self.EWF = np.append(self.EWF, np.ones((self.sp)) * self.E[ix])
+        if self.detailed == False:
+            self.indexWF = np.arange(0, 2 * round((self.tmax + self.dt) / self.dt, 9), 1, dtype = np.int32)
+            self.tWF = np.array(0)
+            for ix in range(1, round(self.indexWF.size / 2)):
+                self.tWF = np.append(self.tWF, np.ones(2) * self.indexWF[ix] * (self.dt))
+            self.twF = np.append(self.tWF, self.tWF[-1] + self.dt)
+            self.EWF = np.array([])
+            for ix in self.E:
+                self.EWF = np.append(self.EWF, np.ones((2)) * ix)
+
+        if self.detailed == True:
+            self.indexWF = np.arange(0, self.sp * round((self.tmax + self.dt) / self.dt, 9), 1, dtype = np.int32)
+            self.tWF = (self.indexWF * self.dt) / self.sp
+            self.EWF = np.array([])
+            for ix in self.E:
+                self.EWF = np.append(self.EWF, np.ones((self.sp)) * ix)
 
 class AC(hybrid):
     pass
@@ -779,7 +830,7 @@ if __name__ == '__main__':
             raise
     filepath = cwd + '/data/' + 'waveform.txt'
 
-    wf = CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.005, sr = 0.1, ns = 1, st = 0.0001, detailed = False)
+    wf = CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.005, sr = 0.1, ns = 1)
 
     with open(filepath, 'w') as file:
         for ix, iy, iz in wf.output():
