@@ -22,6 +22,7 @@ class E:
         self.tPLOT = self.input.tPLOT
         self.EPLOT = self.input.EPLOT
 
+
         if self.input.type == 'sweep':
             self.Eini = self.input.Eini
             self.Eupp = self.input.Eupp
@@ -32,6 +33,14 @@ class E:
 
             self.detailed = False
 
+
+        if self.input.type == 'step':
+            self.dE = self.input.dE
+            self.dt = self.input.dt
+
+            self.detailed = False
+
+
         if self.input.type == 'pulse':
             self.Eini = self.input.Eini
             self.Efin = self.input.Efin
@@ -40,7 +49,9 @@ class E:
             self.pt = self.input.pt
             self.rt = self.input.rt
             self.st = self.input.st
+
             self.detailed = self.input.detailed
+
 
         if self.input.type == 'hybrid':
             self.Eini = self.input.Eini
@@ -50,6 +61,7 @@ class E:
             self.sr = self.input.sr
             self.ns = self.input.ns
             self.st = self.input.st
+
             self.detailed = self.input.detailed
 
         
