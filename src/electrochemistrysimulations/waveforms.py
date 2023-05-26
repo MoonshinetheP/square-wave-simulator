@@ -808,6 +808,7 @@ class CSV(hybrid):
             self.EWF = np.array([])
             for ix in self.E:
                 self.EWF = np.append(self.EWF, np.ones((self.sp)) * ix)
+        pass
 
 class AC(hybrid):
     pass
@@ -830,7 +831,7 @@ if __name__ == '__main__':
             raise
     filepath = cwd + '/data/' + 'waveform.txt'
 
-    wf = CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.005, sr = 0.1, ns = 1)
+    wf = CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.0001, detailed = True)
 
     with open(filepath, 'w') as file:
         for ix, iy, iz in wf.output():
