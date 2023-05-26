@@ -121,6 +121,8 @@ class E:
         else:
             self.sT = np.array([])
             self.sT = np.append(self.sT, np.arange(0, self.dT[1], (self.Dmax * self.st) / (self.r ** 2)))
+            if self.sT[-1] > self.dT[1]:
+                self.sT = self.sT[:-1]
         
         self.Tmax = self.T[-1] 
         
@@ -169,11 +171,11 @@ class E:
 
         R = diagonals([self.alpha_R, self.beta_R, self.gamma_R], [-1,0,1]).toarray()
         R[0,:] = np.zeros(self.n)
-        R[0,0] = 1     
+        R[0,0] = self.CR    
         
         O = diagonals([self.alpha_O, self.beta_O, self.gamma_O], [-1,0,1]).toarray()
         O[0,:] = np.zeros(self.n)
-        O[0,0] = 1   
+        O[0,0] = self.CO   
 
         def reduced(t,y):
             return np.dot(R,y)
@@ -198,16 +200,27 @@ class E:
                 self.C_O[0, k] = (-self.C_O[1, k - 1] + (self.x[1] - self.x[0]) * self.K0 * np.exp((1 - self.a) * self.theta[k - 1]) * (self.C_R[1, k - 1] + (self.dO/self.dR) * self.C_O[1, k - 1]))/((self.x[1] - self.x[0]) * self.K0 * (np.exp(-self.a * self.theta[k - 1]) + (self.dO/self.dR) * np.exp((1 - self.a) * self.theta[k - 1])) - 1)
            
             oxidation = solver(reduced, [0, self.dT[k - 1]], self.C_R[:,k - 1], t_eval=self.sT, method='RK45')
-            self.C_R[1:-1, k] = oxidation.y[1:-1, 0]
+            
+            self.C_R[1:-1, k] = oxidation.y[1:-1, -1]
+
+            if self.detailed == True:
+                self.C_Rdet = oxidation.y[1:-1, :]
             
             reduction = solver(oxidised, [0, self.dT[k - 1]], self.C_O[:,k - 1], t_eval=self.sT, method='RK45')
-            self.C_O[1:-1, k] = reduction.y[1:-1, 0]
+            self.C_O[1:-1, k] = reduction.y[1:-1, -1]
+
+            if self.detailed == True:
+                self.C_Odet = reduction.y[1:-1, :]
             
             if self.input.type == 'sweep':
                 self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cR * self.DR) * ((self.C_R[1, k] - self.C_R[0, k]) / (self.x[1] - self.x[0])) - (self.F * np.pi * self.r * self.cO * self.DO) * ((self.C_O[1, k] - self.C_O[0, k]) / (self.x[1] - self.x[0])))
 
             if self.input.type == 'hybrid':
-                self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cR * self.DR) * ((self.C_R[1, k] - self.C_R[0, k]) / (self.x[1] - self.x[0])) - (self.F * np.pi * self.r * self.cO * self.DO) * ((self.C_O[1, k] - self.C_O[0, k]) / (self.x[1] - self.x[0])))
+                if self.detailed == False:
+                    self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cR * self.DR) * ((self.C_R[1, k] - self.C_R[0, k]) / (self.x[1] - self.x[0])) - (self.F * np.pi * self.r * self.cO * self.DO) * ((self.C_O[1, k] - self.C_O[0, k]) / (self.x[1] - self.x[0])))
+                if self.detailed == True:
+                    for ix in range(0, self.input.sp):
+                        self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cR * self.DR) * ((self.C_Rdet[0, ix] - self.C_R[0, k]) / (self.x[1] - self.x[0])) - (self.F * np.pi * self.r * self.cO * self.DO) * ((self.C_Odet[0, ix] - self.C_O[0, k]) / (self.x[1] - self.x[0])))
 
         self.output = zip(self.tPLOT, self.EPLOT, self.flux)
     
@@ -229,7 +242,7 @@ if __name__ == '__main__':
 
     start = time.time()
 
-    shape = wf.CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.00002, detailed = True) 
+    shape = wf.CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.00001, detailed = False) 
     instance = E(input = shape, E0 = 0.25, k0 = 0.1, a = 0.5, cR = 0.005, cO = 0.000, DR = 5E-6, DO = 5E-6, r = 0.15, expansion = 1.05, Nernstian = False, BV = True, MH = False)
     
     filepath = cwd + '/data/' + 'pulse' + '.txt'
