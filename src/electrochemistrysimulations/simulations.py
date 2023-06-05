@@ -1,3 +1,40 @@
+'''
+    Copyright (C) 2023 Steven Linfield
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    Title:              electrochemistry-simulations
+    Repository:         https://github.com/MoonshinetheP/electrochemistry-simulations
+    Main author:        Steven Linfield (MoonshinetheP)
+    Collaborators:      None
+    Acknowledgements:   Oliver Rodriguez (oliverrdz)
+    
+    Description:
+    The aim of this project is to develop an electrochemical simulation platform 
+    which can accomodate different waveforms and various kinetic models whilst 
+    also allowing for both simplified (sampled) and detailed (analogue) responses
+    to be calculated.
+
+    Explanation:
+    This project has been split into several modules which are used in sequence to 
+    prepare the simulation. The workflow looks a little like this:
+        1.  waveforms.py is used to generate a range of waveforms including the main
+            potential waveform used to perform the simulation, a plotting waveform used
+            to plot the output of the simulation (often differs to the main wavefrom,
+            especially for more detailed simulations), and an exported waveform for 
+            visualising the applied potential
+        2.  simulations.py takes the main waveform and uses it to calculate the current
+            given a set of reaction parameters
+        3.  plot.py can be used to visualise the waveform and the resulting current profile
+'''
 import sys
 import os
 import time
@@ -14,10 +51,21 @@ class E:
     E: R -> O + e"""
 
     def __init__(self, input, E0, k0, a, cR, cO, DR, DO, r, expansion, Nernstian, BV, MH):
-        '''Waveform variables'''
-        self.input = input
-        self.index = self.input.index
-        self.t = self.input.t
+        '''
+        ------------------
+        WAVEFORM VARIABLES
+        ------------------
+
+        In this section, several variables are imported from the waveforms module through the input argument.
+        Specific waveform types are defined in order to differentiate between variables that are available in
+        some waveforms, but not others. For sweeps, the detailed variable is set to False by default. For steps,
+        the detailed variable is set to True by default. For all other waveforms, this variable is set according
+        to the value entered in the waveform generation.
+        '''
+
+        self.input = input                                      # The waveform object passed into the simulation class
+        self.index = self.input.index                           # The index (i.e. the list of data points) from the waveform object
+        self.t = self.input.t                                   # The time (derived from the index) from the waveform object
         self.E = self.input.E
         self.tPLOT = self.input.tPLOT
         self.EPLOT = self.input.EPLOT
@@ -114,15 +162,45 @@ class E:
 
         self.T = (self.Dmax * self.t) / (self.r ** 2)
         self.dT = np.diff(self.T)
+
+        if self.input.type == 'pulse':
+            self.pT = np.array([])
+            self.rT = np.array([])
+            for ix in range (0, self.dT.size):
+                if ix % 2 == 0:
+                    self.pT = np.append(self.pT, self.dT[ix])
+                else:
+                    self.rT = np.append(self.rT, self.dT[ix])
         
         if self.detailed == False:
-            self.sT = self.dT
-        
+            if self.input.type == 'sweep' or self.input.type == 'hybrid':
+                self.sT = np.array([])
+                self.sT = np.append(self.sT, np.amin(self.dT))
+            
+            if self.input.type == 'pulse':
+                self.psT = np.empty((self.pT.size, 1))
+                for ix in range(0, self.pT.size):
+                    self.psT[ix,:] = np.amin(self.pT)
+                
+                self.rsT = np.empty((self.rT.size, 1))
+                for iy in range(0, self.rT.size):
+                    self.rsT[iy,:] = np.amin(self.rT)
+                
         else:
-            self.sT = np.array([])
-            self.sT = np.append(self.sT, np.arange(0, self.dT[1], (self.Dmax * self.st) / (self.r ** 2)))
-            if self.sT[-1] > self.dT[1]:
-                self.sT = self.sT[:-1]
+            if self.input.type == 'pulse':
+                self.psT = np.empty((self.pT.size, self.input.pp))
+                for ix in range(0, self.pT.size):
+                    self.psT[ix,:] = np.arange(0, np.amin(self.pT), (self.Dmax * self.st) / (self.r ** 2))
+                
+                self.rsT = np.empty((self.rT.size, self.input.rp))
+                for iy in range(0, self.rT.size):
+                    self.rsT[iy,:] = np.arange(0, np.amin(self.rT), (self.Dmax * self.st) / (self.r ** 2))
+
+            if self.input.type == 'hybrid':
+                self.sT = np.array([])
+                self.sT = np.append(self.sT, np.arange(0, np.amin(self.dT), (self.Dmax * self.st) / (self.r ** 2)))
+                if self.sT[-1] > self.dT[1]:
+                    self.sT = self.sT[:-1]
         
         self.Tmax = self.T[-1] 
         
@@ -183,7 +261,9 @@ class E:
         def oxidised(t,y):
             return np.dot(O,y)
 
-        self.flux = np.array([0])
+        self.flux = np.array([])
+        self.pulseflux = np.array([])
+        self.restflux = np.array([])
 
         for k in range(1,self.m):
             '''Boundary conditions'''
@@ -199,21 +279,54 @@ class E:
 
                 self.C_O[0, k] = (-self.C_O[1, k - 1] + (self.x[1] - self.x[0]) * self.K0 * np.exp((1 - self.a) * self.theta[k - 1]) * (self.C_R[1, k - 1] + (self.dO/self.dR) * self.C_O[1, k - 1]))/((self.x[1] - self.x[0]) * self.K0 * (np.exp(-self.a * self.theta[k - 1]) + (self.dO/self.dR) * np.exp((1 - self.a) * self.theta[k - 1])) - 1)
            
-            oxidation = solver(reduced, [0, self.dT[k - 1]], self.C_R[:,k - 1], t_eval=self.sT, method='RK45')
-            
-            self.C_R[1:-1, k] = oxidation.y[1:-1, -1]
+            if self.input.type == 'sweep' or self.input.type == 'hybrid':
+                oxidation = solver(reduced, [0, self.dT[k - 1]], self.C_R[:,k - 1], t_eval=self.sT, method='RK45')
+                self.C_R[1:-1, k] = oxidation.y[1:-1, -1]
+                if self.detailed == True:
+                    self.C_Rdet = oxidation.y[1:-1, :]
+                
+                reduction = solver(oxidised, [0, self.dT[k - 1]], self.C_O[:,k - 1], t_eval=self.sT, method='RK45')
+                self.C_O[1:-1, k] = reduction.y[1:-1, -1]
+                if self.detailed == True:
+                    self.C_Odet = reduction.y[1:-1, :]
 
-            if self.detailed == True:
-                self.C_Rdet = oxidation.y[1:-1, :]
+            if self.input.type == 'pulse':
+                if k % 2 != 0:
+                    oxidation = solver(reduced, [0, self.dT[k - 1]], self.C_R[:,k - 1], t_eval=self.psT[(k-1)//2], method='RK45')
+                if k % 2 == 0:
+                    oxidation = solver(reduced, [0, self.dT[k - 1]], self.C_R[:,k - 1], t_eval=self.rsT[(k-2)//2], method='RK45')
             
-            reduction = solver(oxidised, [0, self.dT[k - 1]], self.C_O[:,k - 1], t_eval=self.sT, method='RK45')
-            self.C_O[1:-1, k] = reduction.y[1:-1, -1]
+                self.C_R[1:-1, k] = oxidation.y[1:-1, -1]
 
-            if self.detailed == True:
-                self.C_Odet = reduction.y[1:-1, :]
+                if self.detailed == True:
+                    self.C_Rdet = oxidation.y[1:-1, :]
+           
+                if k % 2 != 0:
+                    reduction = solver(oxidised, [0, self.dT[k - 1]], self.C_O[:,k - 1], t_eval=self.psT[(k-1)//2], method='RK45')
+                if k % 2 == 0:
+                    reduction = solver(oxidised, [0, self.dT[k - 1]], self.C_O[:,k - 1], t_eval=self.rsT[(k-2)//2], method='RK45')
+                
+                self.C_O[1:-1, k] = reduction.y[1:-1, -1]
+
+                if self.detailed == True:
+                    self.C_Odet = reduction.y[1:-1, :]
             
             if self.input.type == 'sweep':
                 self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cR * self.DR) * ((self.C_R[1, k] - self.C_R[0, k]) / (self.x[1] - self.x[0])) - (self.F * np.pi * self.r * self.cO * self.DO) * ((self.C_O[1, k] - self.C_O[0, k]) / (self.x[1] - self.x[0])))
+
+            if self.input.type == 'pulse':
+                if self.detailed == False:
+                    if k % 2 != 0:
+                        self.pulseflux = np.append(self.pulseflux, (self.F * np.pi * self.r * self.cR * self.DR) * ((self.C_R[1, k] - self.C_R[0, k]) / (self.x[1] - self.x[0])) - (self.F * np.pi * self.r * self.cO * self.DO) * ((self.C_O[1, k] - self.C_O[0, k]) / (self.x[1] - self.x[0])))
+                    if k % 2 == 0:
+                        self.restflux = np.append(self.restflux, (self.F * np.pi * self.r * self.cR * self.DR) * ((self.C_R[1, k] - self.C_R[0, k]) / (self.x[1] - self.x[0])) - (self.F * np.pi * self.r * self.cO * self.DO) * ((self.C_O[1, k] - self.C_O[0, k]) / (self.x[1] - self.x[0])))
+                if self.detailed == True:
+                    if k % 2 != 0:
+                        for ix in range(0, self.input.pp):
+                            self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cR * self.DR) * ((self.C_Rdet[0, ix] - self.C_R[0, k]) / (self.x[1] - self.x[0])) - (self.F * np.pi * self.r * self.cO * self.DO) * ((self.C_Odet[0, ix] - self.C_O[0, k]) / (self.x[1] - self.x[0])))
+                    if k % 2 == 0:
+                        for ix in range(0, self.input.rp):
+                            self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cR * self.DR) * ((self.C_Rdet[0, ix] - self.C_R[0, k]) / (self.x[1] - self.x[0])) - (self.F * np.pi * self.r * self.cO * self.DO) * ((self.C_Odet[0, ix] - self.C_O[0, k]) / (self.x[1] - self.x[0])))
 
             if self.input.type == 'hybrid':
                 if self.detailed == False:
@@ -221,6 +334,13 @@ class E:
                 if self.detailed == True:
                     for ix in range(0, self.input.sp):
                         self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cR * self.DR) * ((self.C_Rdet[0, ix] - self.C_R[0, k]) / (self.x[1] - self.x[0])) - (self.F * np.pi * self.r * self.cO * self.DO) * ((self.C_Odet[0, ix] - self.C_O[0, k]) / (self.x[1] - self.x[0])))
+        
+        if self.input.type == 'pulse':
+            if self.detailed == False:
+                self.flux = self.pulseflux - self.restflux
+            
+            else:
+                pass
 
         self.output = zip(self.tPLOT, self.EPLOT, self.flux)
     
@@ -242,7 +362,10 @@ if __name__ == '__main__':
 
     start = time.time()
 
-    shape = wf.CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.00001, detailed = False) 
+
+    #shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)    
+    #shape = wf.CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.001, detailed = False) 
+    shape = wf.DPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.5, rt = 1.5, st = 0.01, detailed = True)
     instance = E(input = shape, E0 = 0.25, k0 = 0.1, a = 0.5, cR = 0.005, cO = 0.000, DR = 5E-6, DO = 5E-6, r = 0.15, expansion = 1.05, Nernstian = False, BV = True, MH = False)
     
     filepath = cwd + '/data/' + 'pulse' + '.txt'
