@@ -560,58 +560,88 @@ class CA(step):
 
 """PULSE CLASSES"""
 class DPV(pulse):
-    '''Waveform for differential pulse voltammetry'''
+    '''Waveform for differential pulse voltammetry \n
+    \n
+    Eini - start potential \n
+    Efin - end potential \n
+    dEs  - step potential \n
+    dEp  - pulse potential \n
+    pt   - pulse time \n
+    rt   - rest time \n
+    st   - sampling time'''
     def __init__(self, Eini, Efin, dEs, dEp, pt, rt, st, detailed):
         super().__init__(Eini, Efin, dEs, dEp, pt, rt, st, detailed)
 
         self.subtype = 'DPV'
 
-        if 2 * self.pt == self.rt:
+        if self.pt == self.rt:
             print('\n' + 'Wouldn\'t you rather be using square wave voltammetry?' + '\n')
             sys.exit()       
 
         '''TIME VARIABLES'''
-        self.window = np.abs(self.Efin - self.Eini)
-        self.dp = int(self.window / np.abs(self.dEs))
-        self.dt = self.pt + self.rt
-        self.tmax = self.dp * self.dt
+        self.window = round(self.Efin - self.Eini, 3)
+        self.dp = round(np.abs(self.window/self.dEs))
+        self.dt = round(self.pt + self.rt, 6)
+        self.tmax = round(self.dp * self.dt, 6)
 
         '''SAMPLING VARIABLES'''
-        self.sp = int(self.dt / self.st)
-        self.pp = int(self.pt / self.st)
-        self.rp = int(self.rt / self.st)
+        self.sp = round(self.dt / self.st)
+        self.pp = round(self.pt / self.st)
+        self.rp = round(self.rt / self.st)
         
         '''INDEX'''
-        self.index = np.arange(0, (2 * (self.tmax + self.dt)  / self.dt) + 1, 1, dtype = np.int32)
+        self.index = np.arange(0, round((2 * (self.tmax + self.dt)  / self.dt) + 1, 9), 1, dtype = np.int32)
         
         '''TIME'''
         self.t = np.array([0])
         for ix in range(0, self.dp + 1):
-            self.t = np.append(self.t, ix * self.dt + self.pt)
-            self.t = np.append(self.t, ix * self.dt + self.dt)
+            self.t = np.append(self.t, round(ix * self.dt + self.pt, 9))
+            self.t = np.append(self.t, round(ix * self.dt + self.dt, 9))
         
         '''POTENTIAL'''
         self.E = np.array([0])
         for ix in range(0, self.dp + 1):
-            self.E = np.append(self.E, ix * self.dEs + self.dEp )
-            self.E = np.append(self.E, ix * self.dEs - self.dEp)
+            self.E = np.append(self.E, round(ix * self.dEs + self.dEp, 9))
+            self.E = np.append(self.E, round(ix * self.dEs - self.dEp, 9))
+
 
         '''PLOTTING WAVEFORM'''
-        self.tPLOT = np.array([0])
-        for ix in range (1, self.dp + 1):
-            self.tPLOT = np.append(self.tPLOT, ix * self.dt)
+        if self.detailed == False:
+            self.tPLOT = np.array([])
+            self.EPLOT = np.array([])
+            for ix in self.index:
+                if ix % 2 == 0:
+                    self.tPLOT = np.append(self.tPLOT, self.t[ix])
+                    self.EPLOT = np.append(self.EPLOT, self.E[ix])
+                else:
+                    pass
+
+        if self.detailed == True:
+            self.tPLOT = np.array([])
+            for ix in range (1, self.dp + 1):
+                self.tPLOT = np.append(self.tPLOT, np.linspace((ix - 1) * self.dt, ix * self.dt, self.sp, endpoint = False))
         
-        self.EPLOT = np.array([0])
-        for ix in range(1, self.dp + 1):
-            self.EPLOT = np.append(self.EPLOT, ix * self.dEs)
+            self.EPLOT = np.array([])
+            for ix in range(1, self.dp + 1):
+                self.EPLOT = np.append(self.EPLOT, np.linspace(self.Eini + ((ix - 1) * self.dEs), self.Eini + (ix * self.dEs), self.sp, endpoint = False))
+
 
         '''EXPORTED WAVEFORM'''
-        self.indexWF = np.arange(0, ((self.sp * (self.tmax + self.dt))  / self.dt) + 1, 1, dtype = np.int32)
-        self.tWF = (self.indexWF * self.dt) / self.sp        
-        self.EWF = np.array([0])
-        for ix in range(1, self.E.size - 1, 2):
-            self.EWF = np.append(self.EWF, np.ones((self.pp)) * self.E[ix])
-            self.EWF = np.append(self.EWF, np.ones((self.rp)) * self.E[ix + 1])
+        if self.detailed == False:
+            self.indexWF = np.arange(0, ((self.sp * (self.tmax + self.dt))  / self.dt) + 1, 1, dtype = np.int32)
+            self.tWF = (self.indexWF * self.dt) / self.sp        
+            self.EWF = np.array([0])
+            for ix in range(1, self.E.size - 1, 2):
+                self.EWF = np.append(self.EWF, np.ones((self.pp)) * self.E[ix])
+                self.EWF = np.append(self.EWF, np.ones((self.rp)) * self.E[ix + 1])
+        
+        if self.detailed == True:
+            self.indexWF = np.arange(0, ((self.sp * (self.tmax + self.dt))  / self.dt) + 1, 1, dtype = np.int32)
+            self.tWF = (self.indexWF * self.dt) / self.sp        
+            self.EWF = np.array([0])
+            for ix in range(1, self.E.size - 1, 2):
+                self.EWF = np.append(self.EWF, np.ones((self.pp)) * self.E[ix])
+                self.EWF = np.append(self.EWF, np.ones((self.rp)) * self.E[ix + 1])
 
 class SWV(pulse):
     """Waveform for square wave voltammetry"""
@@ -797,7 +827,8 @@ class CSV(hybrid):
             self.tWF = np.array(0)
             for ix in range(1, round(self.indexWF.size / 2)):
                 self.tWF = np.append(self.tWF, np.ones(2) * self.indexWF[ix] * (self.dt))
-            self.twF = np.append(self.tWF, self.tWF[-1] + self.dt)
+            pass
+            self.tWF = np.append(self.tWF, self.tWF[-1] + self.dt)
             self.EWF = np.array([])
             for ix in self.E:
                 self.EWF = np.append(self.EWF, np.ones((2)) * ix)
@@ -808,7 +839,6 @@ class CSV(hybrid):
             self.EWF = np.array([])
             for ix in self.E:
                 self.EWF = np.append(self.EWF, np.ones((self.sp)) * ix)
-        pass
 
 class AC(hybrid):
     pass
@@ -832,6 +862,7 @@ if __name__ == '__main__':
     filepath = cwd + '/data/' + 'waveform.txt'
 
     wf = CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.0001, detailed = True)
+    wf = DPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.05, rt = 0.15, st = 0.001, detailed = True)
 
     with open(filepath, 'w') as file:
         for ix, iy, iz in wf.output():
