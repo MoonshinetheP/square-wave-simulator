@@ -34,10 +34,10 @@ if __name__ == '__main__':
     '''SIMULATION'''
     start = time.time()
     
-    #shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
-    shape = wf.CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.001, detailed = False)    
+    shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
+    #shape = wf.CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.001, detailed = True)    
     #shape = wf.DPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.05, rt = 0.15, st = 0.001, detailed = True)
-    instance = sim.E(input = shape, E0 = 0.25, k0 = 10, a = 0.5, cR = 0.005, cO = 0.000, DR = 5E-6, DO = 5E-6, r = 0.15, expansion = 1.05, Nernstian = False, BV = True, MH = False)
+    instance = sim.E(input = shape, E0 = 0.25, k0 = 10, a = 0.5, cR = 0.000005, cO = 0.000000, DR = 5E-6, DO = 5E-6, r = 0.1, expansion = 1.05, Nernstian = False, BV = True, MH = False)
    
     end = time.time()
     print(f'The simulation took {end-start} seconds to complete')
@@ -75,11 +75,3 @@ if __name__ == '__main__':
 
     plt.show()
     plt.close()
-    
-    
-    
-    
-   
-    
- 
-
