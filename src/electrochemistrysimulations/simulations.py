@@ -44,6 +44,8 @@ import time
 
 import numpy as np
 import waveforms as wf
+import capacitance as cap
+import noise as noise
 
 from errno import EEXIST
 from scipy.sparse import diags as diagonals
@@ -51,11 +53,11 @@ from scipy.integrate import solve_ivp as solver
 
 
 '''SIMULATION CLASS'''
-class E:
+class Diffusive:
     """Simulation of an E mechanism using solving from scipy \n
     E: R -> O + e"""
 
-    def __init__(self, input, E0, k0, a, cR, cO, DR, DO, r, expansion, Nernstian, BV, MH):
+    def __init__(self, input, E0, k0, a, cR, cO, DR, DO, eqE, eqt, Cd, Ru, Nernstian, BV, MH, electrical, shot, thermal, r, expansion):
         '''
         ------------------
         WAVEFORM VARIABLES
@@ -136,6 +138,18 @@ class E:
         self.R = 8.314                                          # Ideal gas constant (in J/Kmol)
         self.Temp = 298                                         # Standar temperature (in K)
         
+        
+        '''
+        -------------------
+        CELL CHARACTERISTICS
+        -------------------
+        
+        '''
+        self.eqE = eqE
+        self.eqt = eqt
+        
+        self.Cd = Cd
+        self.Ru = Ru
 
         '''
         -------------------
@@ -148,18 +162,35 @@ class E:
         self.BV = BV                                            #
         self.MH = MH                                            #
 
-        self.methods = 0
+        self.kinetics = 0
         for ix in [self.Nernstian, self.BV, self.MH]:
             if ix == True:
-                self.methods += 1
+                self.kinetics += 1
 
-        if self.methods == 0:
+        if self.kinetics == 0:
             print('\n' + 'No kinetic model was chosen' + '\n')
             sys.exit()
 
-        if self.methods >= 2:
+        if self.kinetics >= 2:
             print('\n' + 'More than one kinetic model was chosen' + '\n')
             sys.exit()
+
+
+        '''
+        -------------------
+        NOISE MODELS
+        -------------------
+        
+        '''
+        self.electrical = electrical
+        self.shot = shot
+        self.thermal = thermal
+
+        self.noise = 0
+        for ix in [self.electrical, self.shot, self.thermal]:
+            if ix == True:
+                self.noise += 1
+
 
         '''
         -------------------
@@ -167,7 +198,6 @@ class E:
         -------------------
             
         '''
-    
         self.r = r                                              #
         self.expansion = expansion                              #
 
@@ -178,7 +208,6 @@ class E:
         -------------------
             
         '''
-
         concentrations = np.array([self.cR, self.cO])           #
         self.cmax = np.amax(concentrations)                     #
         self.CR = self.cR / self.cmax                           #
@@ -388,8 +417,12 @@ class E:
                 if self.detailed == False:
                     self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cR * self.DR) * ((self.C_R[1, k] - self.C_R[0, k]) / (self.x[1] - self.x[0])) - (self.F * np.pi * self.r * self.cO * self.DO) * ((self.C_O[1, k] - self.C_O[0, k]) / (self.x[1] - self.x[0])))
                 if self.detailed == True:
-                    for ix in range(0, self.input.sp):
-                        self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cR * self.DR) * ((self.C_Rdet[0, ix] - self.C_R[0, k]) / (self.x[1] - self.x[0])) - (self.F * np.pi * self.r * self.cO * self.DO) * ((self.C_Odet[0, ix] - self.C_O[0, k]) / (self.x[1] - self.x[0])))
+                    if self.input.sampled == False:
+                        for ix in range(0, self.input.sp):
+                            self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cR * self.DR) * ((self.C_Rdet[0, ix] - self.C_R[0, k]) / (self.x[1] - self.x[0])) - (self.F * np.pi * self.r * self.cO * self.DO) * ((self.C_Odet[0, ix] - self.C_O[0, k]) / (self.x[1] - self.x[0])))
+                    if self.input.sampled == True:
+                        self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cR * self.DR) * ((np.average(self.C_Rdet[0, self.input.sp - round(self.input.sp * (1 - self.input.alpha)):]) - self.C_R[0, k]) / (self.x[1] - self.x[0])) - (self.F * np.pi * self.r * self.cO * self.DO) * ((np.average(self.C_Odet[0, self.input.sp - round(self.input.sp * (1 - self.input.alpha)):]) - self.C_O[0, k]) / (self.x[1] - self.x[0])))
+       
         
         '''
         -------------------
@@ -397,6 +430,7 @@ class E:
         -------------------
             
         '''
+        self.capacitance = cap.Capacitance(input = self.input, Cd = self.Cd, Ru = self.Ru)
         if self.input.type == 'pulse':
             if self.detailed == False:
                 self.flux = self.pulseflux - self.restflux
@@ -410,7 +444,7 @@ class E:
         -------------------
             
         '''
-        self.output = zip(self.tPLOT, self.EPLOT, self.flux)
+        self.output = zip(self.tPLOT, self.EPLOT, self.capacitance.i + self.flux)
         self.concentrations = zip(self.C_O, self.C_R)
     
 
@@ -444,16 +478,31 @@ if __name__ == '__main__':
         else: 
             raise
     
+
     '''2. DEFINE THE START TIME'''
     start = time.time()
 
+
     '''3. DESCRIBE THE WAVEFORM'''
-    #shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)    
-    #shape = wf.CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.001, detailed = False) 
-    shape = wf.DPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.5, rt = 1.5, st = 0.01, detailed = True)
+    '''Sweeps'''
+    #shape = wf.LSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
+    #shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
     
+    '''STEPS'''
+    #shape = wf.CA(dE = [0.5], dt = [1], st = 0.001)
+    
+    '''PULSES'''
+    #shape = wf.DPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.05, rt = 0.15, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
+    #shape = wf.SWV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.1, rt = 0.1, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
+    #shape = wf.NPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.05, rt = 0.15, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
+    
+    '''HYBRID'''
+    shape = wf.CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.001, detailed = True, sampled = True, alpha = 0.95)
+    #shape = wf.AC(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
+    
+
     '''4. RUN THE SIMULATION'''
-    instance = E(input = shape, E0 = 0.25, k0 = 0.1, a = 0.5, cR = 0.005, cO = 0.000, DR = 5E-6, DO = 5E-6, r = 0.15, expansion = 1.05, Nernstian = False, BV = True, MH = False)
+    instance = Diffusive(input = shape, E0 = 0.25, k0 = 10, a = 0.5, cR = 0.000005, cO = 0.000000, DR = 5E-6, DO = 5E-6, eqE = 0, eqt = 5, Cd = 0.000050, Ru = 200, Nernstian = False, BV = True, MH = False, electrical = False, shot = False, thermal = False, r = 0.1, expansion = 1.05)
     
     '''5. DEFINE THE END TIME'''
     end = time.time()
