@@ -125,13 +125,18 @@ class Capacitance:
                 for iy in range(0, self.input.dp):
                     space = int(iy * self.input.sp)
                     self.iplus[space:] = np.add(self.iplus[space:], (self.dE/self.Ru) * np.exp((-self.input.tWF[:self.input.sp * self.input.dp - space]) / (self.Ru * self.Cd)))
+                    if self.input.sampled == True:
+                        self.i = np.append(self.i, np.average(self.iplus[space + self.input.sp - round(self.input.sp * (1 - self.input.alpha)): space + self.input.sp]))
                 for iy in range(0, self.input.dp):
                     space = int(iy * self.input.sp)
                     self.iminus[space:] = np.add(self.iminus[space:], (-self.dE/self.Ru) * np.exp((-self.input.tWF[:self.input.sp * self.input.dp - space]) / (self.Ru * self.Cd)))
-                self.i = np.append(self.i, self.iplus)
-                self.i = np.append(self.i, self.iminus)
-                self.iplus = np.zeros(self.input.sp * self.input.dp)
-                self.iminus = np.zeros(self.input.sp * self.input.dp)
+                    if self.input.sampled == True:
+                        self.i = np.append(self.i, -np.average(self.iplus[space + self.input.sp - round(self.input.sp * (1 - self.input.alpha)): space + self.input.sp]))
+                if self.detailed == True and self.input.sampled == False:
+                    self.i = np.append(self.i, self.iplus)
+                    self.i = np.append(self.i, self.iminus)
+                    self.iplus = np.zeros(self.input.sp * self.input.dp)
+                    self.iminus = np.zeros(self.input.sp * self.input.dp)
 
         if self.Eini == self.Eupp:
             self.i = np.array([])
@@ -201,7 +206,7 @@ if __name__ == '__main__':
     '''SIMULATION'''
     start = time.time()
     
-    shape = wf.CSV(Eini = 0.5, Eupp = 0.5, Elow = 0, dE = -0.001, sr = 0.1, ns = 1, st = 0.001, detailed = True)
+    shape = wf.CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.001, detailed = True, sampled = True, alpha = 0.5)
 
     instance = Capacitance(input = shape, Cd = 0.000050, Ru = 500)
     
