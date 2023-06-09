@@ -18,7 +18,7 @@ Main author:        Steven Linfield (MoonshinetheP)
 Collaborators:      None
 Acknowledgements:   Oliver Rodriguez (oliverrdz)
     
-Filename:           testing.py
+Filename:           training.py
 
 ===================================================================================================
 How to use this file:

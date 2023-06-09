@@ -18,7 +18,7 @@ Main author:        Steven Linfield (MoonshinetheP)
 Collaborators:      None
 Acknowledgements:   Oliver Rodriguez (oliverrdz)
     
-Filename:           testing.py
+Filename:           prediction.py
 
 ===================================================================================================
 How to use this file:
@@ -26,46 +26,21 @@ How to use this file:
 
 ===================================================================================================
 '''
-import sys
-import os
-import time
 
-import numpy as np
-import waveforms as wf
-import simulations as sim
-import capacitance as cap
-import noise as noise
+import tensorflow as tf
+from keras.layers import Input, Dense
+from keras.models import Model
 
-from errno import EEXIST
+num_input_features = 10
 
+input_tensor = Input(shape=(2,))
+hidden_layer = Dense(64, activation='relu')(input_tensor)
+output_tensor = Dense(2)(hidden_layer)
 
-if __name__ == '__main__':
+model = Model(input_tensor, output_tensor)
 
-    '''1. MAKE A /DATA FOLDER'''
-    cwd = os.getcwd()    
-    try:
-        os.makedirs(cwd + '/data')
-    except OSError as exc:
-        if exc.errno == EEXIST and os.path.isdir(cwd + '/data'):
-            pass
-        else: 
-            raise
-    
-    '''2. DEFINE THE START TIME'''
-    start = time.time()
+model.compile(optimizer='adam', loss='mse')
 
-    '''3. DESCRIBE THE WAVEFORM'''
-    shape = wf.DPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.5, rt = 1.5, st = 0.01, detailed = True)
-    
-    '''4. RUN THE SIMULATION'''
-    instance = sim.E(input = shape, E0 = 0.25, k0 = 0.1, a = 0.5, cR = 0.005, cO = 0.000, DR = 5E-6, DO = 5E-6, r = 0.15, expansion = 1.05, Nernstian = False, BV = True, MH = False)
-    
-    '''5. DEFINE THE END TIME'''
-    end = time.time()
-    print(end-start)
-
-    '''6. SAVE THE DATA'''
-    filepath = cwd + '/data/' + f'{shape.subtype}' + '.txt'
-    with open(filepath, 'w') as file:
-        for ix, iy, iz in instance.results():
-            file.write(str(ix) + ',' + str(iy) + ',' + str(iz) + '\n')
+num_epochs = 100
+batch_size = 32
+model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=num_epochs, batch_size=batch_size)
