@@ -23,7 +23,7 @@ Filename:           waveforms.py
 ===================================================================================================
 How to use this file:
     
-
+    1. Scroll down to the section titled 'MAKING WAVEFORMS FROM MAIN'
 ===================================================================================================
 '''
 
@@ -89,6 +89,9 @@ class sweep:
         if self.dE == 0:
             print('\n' + 'Step potential must be a non-zero value' + '\n')
             sys.exit()
+        if np.abs(self.dE) > (self.Eupp - self.Elow):
+            print('\n' + 'Step potential cannot be greater than potential window' + '\n')
+            sys.exit()
         if self.Eini == self.Elow and self.dE < 0:
             print('\n' + 'Step potential must be a positive value for a positive scan direction' + '\n')
             sys.exit()
@@ -109,15 +112,16 @@ class sweep:
             
 class step:
     '''Parent class for all step type waveforms'''
-    def __init__(self, dE, dt):
+    def __init__(self, dE, dt, st):
         
         self.type = 'step'
         
-        self.dE = dE              # Potential for single step chronoamperommetry
+        self.dE = dE            # Potential for single step chronoamperommetry
         self.dt = dt            # Step period
+        self.st = st
         
         '''DATATYPE ERRORS'''
-        if isinstance(self.dE, (list)) is True and isinstance(self.dt, (list)) is True and isinstance(self.sp, (list)) is True:
+        if isinstance(self.dE, (list)) is True and isinstance(self.dt, (list)) is True:
             self.multiple = True
             if len(dE) != len(dt):
                 print('\n' + 'The list of potentials, the list of times, and the list of data points were not equal lengths.' + '\n')
@@ -133,6 +137,9 @@ class step:
 
         elif isinstance(self.dE, (list)) is False and isinstance(self.dt, (list)) is False:
             self.multiple = False
+            if isinstance(self.dE, (tuple, dict)) is True and isinstance(self.dt, (tuple, dict)) is True:
+                print('\n' + 'When entering multiple steps, make sure to enter potentials and times as lists and not tuples or dictionaries' + '\n')
+                sys.exit()
             if isinstance(self.dE, (float, int)) is False:
                 print('\n' + 'An invalid datatype was used for the potential. Enter either a float or an integer value corresponding to a potential in V.' + '\n')
                 sys.exit()
@@ -142,6 +149,10 @@ class step:
 
         else:
             print('\n' + 'When entering multiple steps, make sure to enter a separate lists of potentials and times' + '\n')
+            sys.exit()
+        
+        if isinstance(self.st, (float, int)) is False:
+            print('\n' + 'An invalid datatype was used for the sampling time. Enter either a float or an integer value corresponding to a time in s.' + '\n')
             sys.exit()
 
         '''DATA VALUE ERRORS'''
@@ -158,7 +169,11 @@ class step:
         else:      
             if self.dt <= 0:
                 print('\n' + 'Step time must be a positive non-zero value' + '\n')
-                sys.exit()     
+                sys.exit()
+        
+        if self.st <= 0:
+            print('\n' + 'Sampling time must be a positive non-zero value' + '\n')
+            sys.exit()  
     
     def output(self):
         '''Function that returns the waveform for checking or data processing purposes'''
@@ -206,6 +221,16 @@ class pulse:
         if isinstance(self.detailed, (bool)) is False:
             print('\n' + 'An invalid datatype was used for the detailed argument. Enter either True or False.' + '\n')
             sys.exit()
+        if isinstance(self.sampled, (bool)) is False:
+            print('\n' + 'An invalid datatype was used for the sampled argument. Enter either True or False.' + '\n')
+            sys.exit()
+        if isinstance(self.detailed, (bool)) is False:
+            print('\n' + 'An invalid datatype was used for the detailed argument. Enter either True or False.' + '\n')
+            sys.exit()
+        if isinstance(self.alpha,(int,float)) is False:
+            print('\n' + 'The alpha parameter must be a numerical value' + '\n')
+            sys.exit()
+
         
                   
 
@@ -215,6 +240,9 @@ class pulse:
             sys.exit()  
         if self.dEs == 0:
             print('\n' + 'Step potential must be a non-zero value' + '\n')
+            sys.exit()
+        if np.abs(self.dEs) > (self.Efin - self.Eini):
+            print('\n' + 'Step potential cannot be greater than potential window' + '\n')
             sys.exit()
         if self.dEp == 0:
             print('\n' + 'Pulse potential must be a non-zero value' + '\n')
@@ -240,6 +268,9 @@ class pulse:
         if self.st >= self.rt:
             print('\n' + 'Sampling time must be less than the rest period' + '\n')
             sys.exit()
+        if (0 <= self.alpha < 1) == False:
+            print('\n' + 'The alpha parameter must be between 0 and 1' + '\n')
+            sys.exit()
 
 
     def output(self):
@@ -249,7 +280,7 @@ class pulse:
     
 class hybrid:
     '''Parent class for all waveforms composed of both steps and sweeps'''
-    def __init__(self, Eini, Eupp, Elow, dE, sr, ns, st, detailed):
+    def __init__(self, Eini, Eupp, Elow, dE, sr, ns, st, detailed, sampled, alpha):
 
         self.type = 'hybrid'
 
@@ -260,8 +291,11 @@ class hybrid:
         self.sr = sr            # Scan rate for sweeping step techniques
         self.ns = ns            # Number of scans for cyclic staircase voltammetry
         self.st = st            # Sampling time
+        
 
         self.detailed = detailed
+        self.sampled = sampled
+        self.alpha = alpha
 
         '''DATATYPE ERRORS'''
         if isinstance(self.Eini, (float, int)) is False:
@@ -288,7 +322,12 @@ class hybrid:
         if isinstance(self.detailed, (bool)) is False:
             print('\n' + 'An invalid datatype was used for the detailed argument. Enter either True or False.' + '\n')
             sys.exit()
-
+        if isinstance(self.detailed, (bool)) is False:
+            print('\n' + 'An invalid datatype was used for the detailed argument. Enter either True or False.' + '\n')
+            sys.exit()
+        if isinstance(self.alpha,(int,float)) is False:
+            print('\n' + 'The alpha parameter must be a numerical value' + '\n')
+            sys.exit()
 
         '''DATA VALUE ERRORS'''
         if self.Eupp == self.Elow:
@@ -305,6 +344,9 @@ class hybrid:
             sys.exit()
         if self.dE == 0:
             print('\n' + 'Step potential must be a non-zero value' + '\n')
+            sys.exit()
+        if np.abs(self.dE) > (self.Eupp - self.Elow):
+            print('\n' + 'Step potential cannot be greater than potential window' + '\n')
             sys.exit()   
         if self.Eini == self.Elow and self.dE < 0:
             print('\n' + 'Step potential must be a positive value for a positive scan direction' + '\n')
@@ -321,6 +363,10 @@ class hybrid:
         if self.st <= 0:
             print('\n' + 'Sampling time must be a positive non-zero value' + '\n')
             sys.exit()
+        if (0 <= self.alpha < 1) == False:
+            print('\n' + 'The alpha parameter must be between 0 and 1' + '\n')
+            sys.exit()
+
     
     def output(self):
         '''Function that returns the waveform for checking or data processing purposes'''
@@ -378,6 +424,9 @@ class impedance:
             sys.exit()
         if self.dE == 0:
             print('\n' + 'Step potential must be a non-zero value' + '\n')
+            sys.exit()
+        if np.abs(self.dE) > (self.Eupp - self.Elow):
+            print('\n' + 'Step potential cannot be greater than potential window' + '\n')
             sys.exit()   
         if self.Eini == self.Elow and self.dE < 0:
             print('\n' + 'Step potential must be a positive value for a positive scan direction' + '\n')
@@ -400,7 +449,14 @@ class impedance:
 
 """SWEEP CLASSES"""
 class LSV(sweep):
-    '''Waveform for linear sweep voltammetry'''
+    '''Linear Sweep Voltammetry (LSV) waveform\n
+    \n
+    Eini - start potential \n
+    Eupp - upper vertex potential \n
+    Elow - lower vertex potential \n
+    dE   - step size (in this case, number of data points) \n
+    sr   - scan rate \n
+    ns   - number of scans (ignored)'''
     def __init__(self,Eini, Eupp, Elow, dE, sr, ns):
         super().__init__(Eini, Eupp, Elow, dE, sr, ns)
 
@@ -412,35 +468,35 @@ class LSV(sweep):
         
         '''STARTING FROM LOWER VERTEX POTENTIAL''' 
         if self.Eini == self.Elow:                 
-            self.window = np.abs(self.Eupp - self.Elow)
-            self.dp = int(self.window / np.abs(self.dE))
-            self.tmax = self.window / self.sr
-            self.dt = np.abs(self.dE) / self.sr
+            self.window = round(self.Eupp - self.Elow, 3)
+            self.dp = round(np.abs(self.window / self.dE))
+            self.tmax = round(self.window / self.sr, 6)
+            self.dt = round(np.abs(self.dE / self.sr), 9)
         
             '''INDEX'''
-            self.index = np.arange(0, ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
+            self.index = np.arange(0, round((self.tmax + self.dt) / self.dt, 9), 1, dtype = np.int32)
         
             '''TIME'''
             self.t = self.index * self.dt
             
             '''POTENTIAL'''
-            self.E = np.linspace(self.Eini, self.Eupp, self.dp + 1, endpoint = True, dtype = np.float32)
+            self.E = np.round(np.linspace(self.Eini, self.Eupp, self.dp + 1, endpoint = True, dtype = np.float32), 3)
         
         '''STARTING FROM UPPER VERTEX POTENTIAL''' 
         if self.Eini == self.Eupp:                 
-            self.window = np.abs(self.Eupp - self.Elow)
-            self.dp = int(self.window / np.abs(self.dE))
-            self.tmax = self.window / self.sr
-            self.dt = np.abs(self.dE) / self.sr
+            self.window = round(self.Eupp - self.Elow, 3)
+            self.dp = round(np.abs(self.window / self.dE))
+            self.tmax = round(self.window / self.sr, 6)
+            self.dt = round(np.abs(self.dE / self.sr), 9)
         
             '''INDEX'''
-            self.index = np.arange(0, ((self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
+            self.index = np.arange(0, round((self.tmax + self.dt) / self.dt, 9), 1, dtype = np.int32)
         
             '''TIME'''
             self.t = self.index * self.dt
             
             '''POTENTIAL'''
-            self.E = np.linspace(self.Eini, self.Elow, self.dp + 1, endpoint = True, dtype = np.float32)
+            self.E = np.round(np.linspace(self.Eini, self.Elow, self.dp + 1, endpoint = True, dtype = np.float32), 3)
         
         '''PLOTTING WAVEFORM'''
         self.tPLOT = self.t
@@ -551,9 +607,14 @@ class CV(sweep):
 
 """STEP CLASSES"""
 class CA(step):
-    '''Waveform for chronoamperommetry'''
-    def __init__(self, dE, dt):
-        super().__init__(dE, dt)
+    '''Chronoamperommetry (CA) waveform\n   
+    \n
+    dE  =   step potential \n
+    dt  =   step duration \n
+    st  =   sampling time'''
+
+    def __init__(self, dE, dt, st):
+        super().__init__(dE, dt, st)
 
         self.subtype = 'CA'
 
@@ -563,7 +624,8 @@ class CA(step):
             self.index = 0
         
             '''TIME'''
-            self.t = self.dt
+            self.t = np.array([0])
+            self.t = np.append(self.t, self.dt)
             
             '''POTENTIAL'''
             self.E = self.dE
@@ -574,20 +636,32 @@ class CA(step):
             self.index = np.arange(0, len(self.dE), 1, dtype = np.int32)
      
             '''TIME'''
-            self.t = self.dt.toarray()
+            self.t = np.array([0])
+            for ix in np.asarray(self.dt):
+                self.t = np.append(self.t, self.t[-1] + ix)
             
             '''POTENTIAL'''
-            self.E = self.dE.toarray()
+            self.E = np.asarray(self.dE)
         
         
         '''PLOTTING WAVEFORM'''
-        self.tPLOT = self.t
-        self.EPLOT = self.E
+        self.tPLOT = np.array([])
+        for ix in range(0, self.t.size):
+            try:
+                self.tPLOT = np.append(self.tPLOT, np.arange(self.t[ix], self.t[ix + 1], self.st))
+            except:
+                pass
 
         '''EXPORTED WAVEFORM'''
-        self.indexWF = self.index
-        self.tWF = self.t        
-        self.EWF = self.E
+        self.indexWF = np.arange(0, self.tPLOT.size, 1)
+        self.tWF = self.tPLOT        
+        
+        if self.multiple == False:
+            self.EWF = self.dE * np.ones(round(self.dt/self.st))
+        if self.multiple == True:
+            self.EWF = np.array([])
+            for ix in range(0, self.E.size):
+                self.EWF = np.append(self.EWF, self.E[ix] * np.ones(round(self.dt[ix]/self.st)))
 
 
 """PULSE CLASSES"""
@@ -676,52 +750,124 @@ class DPV(pulse):
                 self.EWF = np.append(self.EWF, np.ones((self.rp)) * self.E[ix + 1])
 
 class SWV(pulse):
-    """Waveform for square wave voltammetry"""
+    '''Waveform for square wave voltammetry \n   
+    \n
+    Eini - start potential \n
+    Eupp - upper vertex potential \n
+    Elow - lower vertex potential \n
+    dE   - step size \n
+    sr   - scan rate \n
+    ns   - number of scans \n
+    st   - sampling time'''
     def __init__(self, Eini, Efin, dEs, dEp, pt, rt, st, detailed):
         super().__init__(Eini, Efin, dEs, dEp, pt, rt, st, detailed)
 
         self.subtype = 'SWV'
 
-        if 2 * self.pt != self.dt:
+        if self.pt != self.rt:
             print('\n' + 'Wouldn\'t you rather be using differential pulse voltammetry?' + '\n')
             sys.exit()       
 
-        self.window = np.abs(self.Efin - self.Eini)
-        self.dp = int(self.window / np.abs(self.dEs))
-        self.tmax = self.dp * self.dt
+        '''TIME VARIABLES'''
+        self.window = round(self.Efin - self.Eini, 3)
+        self.dp = round(np.abs(self.window/self.dEs))
+        self.dt = round(self.pt + self.rt, 6)
+        self.tmax = round(self.dp * self.dt, 6)
 
-        '''INDEX'''
-        self.index = np.arange(0, ((self.sp * self.tmax + self.dt) / self.dt), 1, dtype = np.int32)
-
-        '''TIME'''
-        self.t = (self.index / self.sp) * self.dt
-
-        '''POTENTIAL'''
-        self.step = np.array([])
-        for ix in range(0, self.dp):
-            self.step = np.append(self.step, np.ones((self.sp)) * (ix * self.dEs))
-        self.square = square(2 * np.pi * (1/self.dt) * self.t[:-1], duty = self.pt/self.dt) * self.dEp
+        '''SAMPLING VARIABLES'''
+        self.sp = round(self.dt / self.st)
+        self.pp = round(self.pt / self.st)
+        self.rp = round(self.rt / self.st)
         
-        self.E = np.array([self.Eini])
-        self.E = np.append(self.E, (self.step + self.square))
+        '''INDEX'''
+        self.index = np.arange(0, round((2 * (self.tmax + self.dt)  / self.dt) + 1, 9), 1, dtype = np.int32)
+        
+        '''TIME'''
+        self.t = np.array([0])
+        for ix in range(0, self.dp + 1):
+            self.t = np.append(self.t, round(ix * self.dt + self.pt, 9))
+            self.t = np.append(self.t, round(ix * self.dt + self.dt, 9))
+        
+        '''POTENTIAL'''
+        self.E = np.array([0])
+        for ix in range(0, self.dp + 1):
+            self.E = np.append(self.E, round(ix * self.dEs + self.dEp, 9))
+            self.E = np.append(self.E, round(ix * self.dEs - self.dEp, 9))
+
+
+        '''PLOTTING WAVEFORM'''
+        if self.detailed == False:
+            self.tPLOT = np.array([])
+            self.EPLOT = np.array([])
+            for ix in self.index:
+                if ix % 2 == 0:
+                    self.tPLOT = np.append(self.tPLOT, self.t[ix])
+                    self.EPLOT = np.append(self.EPLOT, self.E[ix])
+                else:
+                    pass
+
+        if self.detailed == True:
+            self.tPLOT = np.array([])
+            for ix in range (1, self.dp + 1):
+                self.tPLOT = np.append(self.tPLOT, np.linspace((ix - 1) * self.dt, ix * self.dt, self.sp, endpoint = False))
+        
+            self.EPLOT = np.array([])
+            for ix in range(1, self.dp + 1):
+                self.EPLOT = np.append(self.EPLOT, np.linspace(self.Eini + ((ix - 1) * self.dEs), self.Eini + (ix * self.dEs), self.sp, endpoint = False))
+
+
+        '''EXPORTED WAVEFORM'''
+        if self.detailed == False:
+            self.indexWF = np.arange(0, ((self.sp * (self.tmax + self.dt))  / self.dt) + 1, 1, dtype = np.int32)
+            self.tWF = (self.indexWF * self.dt) / self.sp        
+            self.EWF = np.array([0])
+            for ix in range(1, self.E.size - 1, 2):
+                self.EWF = np.append(self.EWF, np.ones((self.pp)) * self.E[ix])
+                self.EWF = np.append(self.EWF, np.ones((self.rp)) * self.E[ix + 1])
+        
+        if self.detailed == True:
+            self.indexWF = np.arange(0, ((self.sp * (self.tmax + self.dt))  / self.dt) + 1, 1, dtype = np.int32)
+            self.tWF = (self.indexWF * self.dt) / self.sp        
+            self.EWF = np.array([0])
+            for ix in range(1, self.E.size - 1, 2):
+                self.EWF = np.append(self.EWF, np.ones((self.pp)) * self.E[ix])
+                self.EWF = np.append(self.EWF, np.ones((self.rp)) * self.E[ix + 1])
 
 class NPV(pulse):
-    '''Waveform for normal pulse voltammetry'''
-    def __init__(self, Eini, Efin, dEs, dEp, dt, pt):
-        super().__init__(Eini, Efin, dEs, dEp, dt, pt)
+    '''Waveform for normal pulse voltammetry\n   
+    \n
+    Eini - start potential \n
+    Efin - upper vertex potential \n
+    dEs   - step size \n   
+    dEp   - step size \n
+    sr   - scan rate \n
+    ns   - number of scans \n
+    st   - sampling time'''
+    def __init__(self, Eini, Efin, dEs, dEp, pt, rt, st, detailed):
+        super().__init__(Eini, Efin, dEs, dEp, pt, rt, st, detailed)
 
         self.subtype = 'NPV'
 
-        self.window = np.abs(self.Efin - self.Eini)
-        self.dp = int(self.window / np.abs(self.dEs))
-        self.tmax = self.dp * self.dt
+        '''TIME VARIABLES'''
+        self.window = round(self.Efin - self.Eini, 3)
+        self.dp = round(np.abs(self.window/self.dEs))
+        self.dt = round(self.pt + self.rt, 6)
+        self.tmax = round(self.dp * self.dt, 6)
 
+        '''SAMPLING VARIABLES'''
+        self.sp = round(self.dt / self.st)
+        self.pp = round(self.pt / self.st)
+        self.rp = round(self.rt / self.st)
+        
         '''INDEX'''
-        self.index = np.arange(0, (self.tmax + self.dt) / self.dt, 1, dtype = np.int32)
-
+        self.index = np.arange(0, round((2 * (self.tmax + self.dt)  / self.dt) + 1, 9), 1, dtype = np.int32)
+        
         '''TIME'''
-        self.t = self.index * self.dt
-
+        self.t = np.array([0])
+        for ix in range(0, self.dp + 1):
+            self.t = np.append(self.t, round(ix * self.dt + self.pt, 9))
+            self.t = np.append(self.t, round(ix * self.dt + self.dt, 9))
+        
         '''POTENTIAL'''
         self.E = np.array([self.Eini])
         for ix in range(1, self.dp + 1):
@@ -731,6 +877,44 @@ class NPV(pulse):
             else:
                 self.E = np.append(self.E, square(2 * np.pi * (1/self.dt) * self.t[ix - 1:self.dp], duty = self.pt/self.dt) *(0.5 * self.dp * self.dEs) + (0.5 * self.dp * self.dEs))
                 self.E = np.append(self.E, self.Eini)
+
+        '''PLOTTING WAVEFORM'''
+        if self.detailed == False:
+            self.tPLOT = np.array([])
+            self.EPLOT = np.array([])
+            for ix in self.index:
+                if ix % 2 == 0:
+                    self.tPLOT = np.append(self.tPLOT, self.t[ix])
+                    self.EPLOT = np.append(self.EPLOT, self.E[ix])
+                else:
+                    pass
+
+        if self.detailed == True:
+            self.tPLOT = np.array([])
+            for ix in range (1, self.dp + 1):
+                self.tPLOT = np.append(self.tPLOT, np.linspace((ix - 1) * self.dt, ix * self.dt, self.sp, endpoint = False))
+        
+            self.EPLOT = np.array([])
+            for ix in range(1, self.dp + 1):
+                self.EPLOT = np.append(self.EPLOT, np.linspace(self.Eini + ((ix - 1) * self.dEs), self.Eini + (ix * self.dEs), self.sp, endpoint = False))
+
+
+        '''EXPORTED WAVEFORM'''
+        if self.detailed == False:
+            self.indexWF = np.arange(0, ((self.sp * (self.tmax + self.dt))  / self.dt) + 1, 1, dtype = np.int32)
+            self.tWF = (self.indexWF * self.dt) / self.sp        
+            self.EWF = np.array([0])
+            for ix in range(1, self.E.size - 1, 2):
+                self.EWF = np.append(self.EWF, np.ones((self.pp)) * self.E[ix])
+                self.EWF = np.append(self.EWF, np.ones((self.rp)) * self.E[ix + 1])
+        
+        if self.detailed == True:
+            self.indexWF = np.arange(0, ((self.sp * (self.tmax + self.dt))  / self.dt) + 1, 1, dtype = np.int32)
+            self.tWF = (self.indexWF * self.dt) / self.sp        
+            self.EWF = np.array([0])
+            for ix in range(1, self.E.size - 1, 2):
+                self.EWF = np.append(self.EWF, np.ones((self.pp)) * self.E[ix])
+                self.EWF = np.append(self.EWF, np.ones((self.rp)) * self.E[ix + 1])
                 
 
 """HYBRID CLASSES"""
@@ -744,11 +928,154 @@ class CSV(hybrid):
     sr   - scan rate \n
     ns   - number of scans \n
     st   - sampling time'''
-    def __init__(self, Eini, Eupp, Elow, dE, sr, ns, st, detailed):
-        super().__init__(Eini, Eupp, Elow, dE, sr, ns, st, detailed)
+    def __init__(self, Eini, Eupp, Elow, dE, sr, ns, st, detailed, sampled, alpha):
+        super().__init__(Eini, Eupp, Elow, dE, sr, ns, st, detailed, sampled, alpha)
         
         self.subtype = 'CSV'
 
+        '''STARTING FROM LOWER VERTEX POTENTIAL''' 
+        if self.Eini == self.Elow:                
+            self.window = round(self.Eupp - self.Elow, 3)
+            self.dp = round(np.abs(self.window / self.dE))
+            self.tmax = round(2 * self.ns * self.window / self.sr, 6)
+            self.dt = round(np.abs(self.dE / self.sr), 9)
+            self.sp = round(self.dt / self.st)
+
+            '''INDEX'''
+            self.index = np.arange(0, round((self.tmax + self.dt) / self.dt, 9), 1, dtype = np.int32)
+        
+            '''TIME'''
+            self.t = self.index * self.dt
+            
+            '''POTENTIAL'''
+            self.E = np.array([self.Eini])
+            for ix in range(0, self.ns):
+                self.E = np.append(self.E, np.linspace(self.Eini + self.dE, self.Eupp, self.dp, endpoint = True, dtype = np.float32))
+                self.E = np.append(self.E, np.linspace(self.Eupp - self.dE, self.Eini, self.dp, endpoint = True, dtype = np.float32))
+            self.E = np.round(self.E, 6)
+
+    
+        '''STARTING FROM UPPER VERTEX POTENTIAL'''
+        if self.Eini == self.Eupp:     
+            self.window = round(self.Eupp - self.Elow, 3)
+            self.dp = round(np.abs(self.window / self.dE))
+            self.tmax = round(2 * self.ns * self.window / self.sr, 6)
+            self.dt = round(np.abs(self.dE / self.sr), 9)
+            self.sp = round(self.dt / self.st)
+
+            '''INDEX'''
+            self.index = np.arange(0, round((self.tmax + self.dt) / self.dt, 9), 1, dtype = np.int32)
+        
+            '''TIME'''
+            self.t = self.index * self.dt
+            
+            '''POTENTIAL'''
+            self.E = np.array([self.Eini])
+            for ix in range(0, self.ns):
+                self.E = np.append(self.E, np.linspace(self.Eini + self.dE, self.Elow, self.dp, endpoint = True, dtype = np.float32))
+                self.E = np.append(self.E, np.linspace(self.Elow - self.dE, self.Eini, self.dp, endpoint = True, dtype = np.float32))
+            self.E = np.round(self.E, 6)
+
+
+        '''STARTING IN BETWEEN VERTEX POTENTIALS'''
+        if self.Elow < self.Eini < self.Eupp:        
+            self.uppwindow = round(self.Eupp - self.Eini, 3)
+            self.window = round(self.Eupp - self.Elow, 3)
+            self.lowwindow = round(self.Eini - self.Elow, 3)
+            self.uppdp = round(np.abs(self.uppwindow / self.dE))
+            self.dp = round(np.abs(self.window / self.dE))
+            self.lowdp = round(np.abs(self.lowwindow / self.dE))
+            self.tmax = round(self.ns * (self.uppwindow + self.window + self.lowwindow) / self.sr, 6)
+            self.dt = round(np.abs(self.dE / self.sr), 9)
+            self.sp = round(self.dt / self.st)
+
+            '''INDEX'''
+            self.index = np.arange(0, round((self.tmax + self.dt) / self.dt, 9), 1, dtype = np.int32)
+        
+            '''TIME'''
+            self.t = self.index * self.dt
+            
+            '''POTENTIAL WITH POSITIVE SCAN DIRECTION'''
+            if self.dE > 0:
+                self.E = np.array([self.Eini])
+                for ix in range(0, self.ns):
+                    self.E = np.append(self.E, np.linspace(self.Eini + self.dE, self.Eupp, self.uppdp, endpoint = True, dtype = np.float32))
+                    self.E = np.append(self.E, np.linspace(self.Eupp - self.dE, self.Elow, self.dp, endpoint = True, dtype = np.float32))
+                    self.E = np.append(self.E, np.linspace(self.Elow + self.dE, self.Eini, self.lowdp, endpoint = True, dtype = np.float32))
+
+            '''POTENTIAL WITH NEGATIVE SCAN DIRECTION'''
+            if self.dE < 0:
+                self.E = np.array([self.Eini])
+                for ix in range(0, self.ns):
+                    self.E = np.append(self.E, np.linspace(self.Eini - self.dE, self.Elow, self.lowdp, endpoint = True, dtype = np.float32))
+                    self.E = np.append(self.E, np.linspace(self.Elow + self.dE, self.Eupp, self.dp, endpoint = True, dtype = np.float32))
+                    self.E = np.append(self.E, np.linspace(self.Eupp + self.dE, self.Eini, self.uppdp, endpoint = True, dtype = np.float32))
+            
+            self.E = np.round(self.E, 6)
+        
+
+        '''PLOTTING WAVEFORM'''
+        if self.detailed == False:
+            self.tPLOT = self.t
+            self.EPLOT = self.E
+
+        if self.detailed == True:
+            if self.sampled == True:
+                self.tPLOT = self.t
+            else:
+                self.tPLOT = np.array([])
+                for ix in range(0, self.t.size):
+                    try:
+                        self.tPLOT = np.append(self.tPLOT, np.linspace(self.t[ix], self.t[ix + 1], self.sp, endpoint = False))
+                    except:
+                        self.tPLOT = np.append(self.tPLOT, np.linspace(self.t[ix], self.t[ix] + self.dt, self.sp, endpoint = False))
+                self.tPLOT = np.round(self.tPLOT, 9)
+
+            if self.sampled == True:
+                self.EPLOT = self.E
+            else:
+                self.EPLOT = np.array([])
+                for iy in range(0, self.E.size):
+                    try:
+                        self.EPLOT = np.append(self.EPLOT, np.linspace(self.E[iy], self.E[iy + 1], self.sp, endpoint = False))
+                    except:
+                        self.EPLOT = np.append(self.EPLOT, np.linspace(self.E[iy], self.E[iy] + self.dE, self.sp, endpoint = False))
+                self.EPLOT = np.round(self.EPLOT, 9)
+
+    
+        '''EXPORTED WAVEFORM'''
+        if self.detailed == False:
+            self.indexWF = np.arange(0, 2 * round((self.tmax + self.dt) / self.dt, 9), 1, dtype = np.int32)
+            self.tWF = np.array(0)
+            for ix in range(1, round(self.indexWF.size / 2)):
+                self.tWF = np.append(self.tWF, np.ones(2) * self.indexWF[ix] * (self.dt))
+            self.tWF = np.append(self.tWF, self.tWF[-1] + self.dt)
+            self.EWF = np.array([])
+            for ix in self.E:
+                self.EWF = np.append(self.EWF, np.ones((2)) * ix)
+
+        if self.detailed == True:
+            self.indexWF = np.arange(0, self.sp * round((self.tmax + self.dt) / self.dt, 9), 1, dtype = np.int32)
+            self.tWF = (self.indexWF * self.dt) / self.sp
+            self.EWF = np.array([])
+            for ix in self.E:
+                self.EWF = np.append(self.EWF, np.ones((self.sp)) * ix)
+
+class AC(hybrid):
+    '''Waveform for AC voltammetry \n   
+    \n
+    Eini - start potential \n
+    Eupp - upper vertex potential \n
+    Elow - lower vertex potential \n
+    dE   - step size \n
+    sr   - scan rate \n
+    ns   - number of scans \n
+    st   - sampling time'''
+    def __init__(self, Eini, Eupp, Elow, dE, sr, ns, st, detailed):
+        super().__init__(Eini, Eupp, Elow, dE, sr, ns, st, detailed)
+        
+        self.subtype = 'AC'
+        
         '''STARTING FROM LOWER VERTEX POTENTIAL''' 
         if self.Eini == self.Elow:                
             self.window = round(self.Eupp - self.Elow, 3)
@@ -872,16 +1199,28 @@ class CSV(hybrid):
             for ix in self.E:
                 self.EWF = np.append(self.EWF, np.ones((self.sp)) * ix)
 
-class AC(hybrid):
-    pass
 
+"""IMPEDANCE CLASSES"""
 class EIS(impedance):
     pass
 
 
+
+
+
+
+
+"""
+===================================================================================================
+GENERATING WAVEFORMS FROM MAIN
+===================================================================================================
+"""
+
+
 if __name__ == '__main__': 
         
-    start = time.time()    
+     
+    '''1. MAKE A /DATA FOLDER''' 
     cwd = os.getcwd()
 
     try:
@@ -891,13 +1230,33 @@ if __name__ == '__main__':
             pass
         else: 
             raise
+
+    '''2. DEFINE THE START TIME'''
+    start = time.time()  
+
+    '''3. DESCRIBE THE WAVEFORM'''
+    '''Sweeps'''
+    #wf = LSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
+    #wf = CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
+    
+    '''STEPS'''
+    wf = CA(dE = [0.5], dt = [1], st = 0.001)
+    
+    '''PULSES'''
+    #wf = DPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.05, rt = 0.15, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
+    #wf = SWV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.1, rt = 0.1, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
+    #wf = NPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.05, rt = 0.15, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
+    
+    '''HYBRID'''
+    #wf = CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
+    #wf = AC(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
+    
+    '''5. DEFINE THE END TIME'''
+    end = time.time()
+    print(f'The simulation took {end-start} seconds to complete')
+
+    '''6. SAVE THE DATA'''
     filepath = cwd + '/data/' + 'waveform.txt'
-
-    wf = DPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.05, rt = 0.15, st = 0.001, detailed = True)
-
     with open(filepath, 'w') as file:
         for ix, iy, iz in wf.output():
             file.write(str(ix) + ',' + str(iy) + ',' + str(iz) + '\n')
-
-    end = time.time()
-    print(f'The simulation took {end-start} seconds to complete')
