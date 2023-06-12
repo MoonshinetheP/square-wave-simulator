@@ -66,12 +66,11 @@ if __name__ == '__main__':
     '''SIMULATION'''
     start = time.time()
     
-    #shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
-    shape = wf.CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.001, detailed = True)    
+    shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
+    #shape = wf.CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.001, detailed = True)    
     #shape = wf.DPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.05, rt = 0.15, st = 0.001, detailed = True)
-    instance = sim.E(input = shape, E0 = 0.25, k0 = 10, a = 0.5, cR = 0.000005, cO = 0.000000, DR = 5E-6, DO = 5E-6, r = 0.1, expansion = 1.05, Nernstian = False, BV = True, MH = False)
-    capacitance = cap.Capacitance(shape, Cd = 0.00005, Ru = 100)
-    #capacitance.i = np.zeros((capacitance.i.size))
+    instance = sim.Diffusive(input = shape, E0 = 0.25, k0 = 10, a = 0.5, cR = 0.000005, cO = 0.000000, DR = 5E-6, DO = 5E-6, eqE = 0.5, eqt = 5, Cd = 0.000001, Ru = 1000, Nernstian = False, BV = True, MH = False, electrical = True, shot = False, thermal = False, r = 0.1, expansion = 1.05)
+
     end = time.time()
     print(f'The simulation took {end-start} seconds to complete')
 
@@ -88,9 +87,9 @@ if __name__ == '__main__':
     fig.tight_layout(pad = 5)
     left, = ax1.plot(shape.tWF, shape.EWF, linewidth = 1, linestyle = '-', color = 'blue', marker = None, label = None, visible = True)
     if instance.detailed == False:
-        right, = ax2.plot(instance.EPLOT[:-1], instance.flux + capacitance.i, linewidth = 1, linestyle = '-', color = 'red', marker = None, label = None, visible = True)        
+        right, = ax2.plot(instance.EPLOT[:-1], instance.flux, linewidth = 1, linestyle = '-', color = 'red', marker = None, label = None, visible = True)        
     if instance.detailed == True:
-        right, = ax2.plot(instance.EPLOT[:-shape.sp], instance.flux + capacitance.i, linewidth = 1, linestyle = '-', color = 'red', marker = None, label = None, visible = True)
+        right, = ax2.plot(instance.EPLOT[:-shape.sp], instance.flux, linewidth = 1, linestyle = '-', color = 'red', marker = None, label = None, visible = True)
 
 
     '''PLOT SETTINGS'''
@@ -101,7 +100,7 @@ if __name__ == '__main__':
     ax1.set_ylabel('E / V', labelpad = 5, fontsize = 15)
 
     ax2.set_xlim(np.amin(instance.EPLOT) - (0.1 * (np.amax(instance.EPLOT) - np.amin(instance.EPLOT))), np.amax(instance.EPLOT) + (0.1 * (np.amax(instance.EPLOT) - np.amin(instance.EPLOT))))
-    ax2.set_ylim(np.amin(instance.flux + capacitance.i) - (0.1 * (np.amax(instance.flux + capacitance.i) - np.amin(instance.flux + capacitance.i))), np.amax(instance.flux + capacitance.i) + (0.1 * (np.amax(instance.flux + capacitance.i) - np.amin(instance.flux + capacitance.i)))) 
+    ax2.set_ylim(np.amin(instance.flux) - (0.1 * (np.amax(instance.flux) - np.amin(instance.flux))), np.amax(instance.flux) + (0.1 * (np.amax(instance.flux) - np.amin(instance.flux)))) 
     ax2.set_title('i vs. E', pad = 15, fontsize = 20)
     ax2.set_xlabel('E / V', labelpad = 5, fontsize = 15)
     ax2.set_ylabel('i / A', labelpad = 5, fontsize = 15)
