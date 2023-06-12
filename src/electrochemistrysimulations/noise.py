@@ -63,8 +63,7 @@ class Noise:
         #self.report(self, self.ie, self.ir, self.it)
 
     def electricalnoise(self):
-        self.ie = np.sin(2*np.pi*50*self.t)
-        return zip(self.t, self.ie)
+        self.i = (1E-6)*np.sin(2*np.pi*50*self.t)
 
     def shotnoise(self):
         lambda_, N = 1.4, 19
@@ -98,7 +97,7 @@ if __name__ == '__main__':
     start = time.time()
 
     '''3. DESCRIBE THE WAVEFORM'''
-    shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)    
+    shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.5, ns = 1)    
     
     '''4. RUN THE SIMULATION'''
     instance = Noise(input = shape, electrical = True)
