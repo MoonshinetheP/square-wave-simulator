@@ -139,17 +139,7 @@ class Diffusive:
         self.Temp = 298                                         # Standar temperature (in K)
         
         
-        '''
-        -------------------
-        CELL CHARACTERISTICS
-        -------------------
-        
-        '''
-        self.eqE = eqE
-        self.eqt = eqt
-        
-        self.Cd = Cd
-        self.Ru = Ru
+
 
         '''
         -------------------
@@ -271,7 +261,20 @@ class Diffusive:
 
         self.K0 = (self.k0 * self.r) / self.Dmax                #
         
+        '''
+        -------------------
+        CELL CHARACTERISTICS
+        -------------------
         
+        '''
+        self.eqE = eqE
+        self.eqtheta = (self.F / (self.R * self.Temp)) * self.eqE
+        
+        self.eqt = eqt
+        self.eqT = (self.Dmax * self.eqt) / (self.r ** 2)         
+        
+        self.Cd = Cd
+        self.Ru = Ru
         '''
         -------------------
         EXPANDING SPATIAL GRID
@@ -350,7 +353,35 @@ class Diffusive:
         -------------------
             
         '''
+        if self.eqT > 0:
+            if self.Nernstian == True:
+                '''Nernstian'''
+                self.C_R[0, 1] = (self.C_R[1, 0] + (self.dR/self.dO) * self.C_O[1, 0])/(1 + (self.dR/self.dO) * np.exp(self.eqtheta))
+
+                self.C_O[0, 1] = (self.C_R[1, 0] + (self.dR/self.dO) * self.C_O[1, 0])/((self.dR/self.dO) + np.exp(-self.eqtheta))
+                
+            if self.BV == True:
+                '''Butler-Volmer'''
+                self.C_R[0, 1] = (-self.C_R[1, 0] + (self.x[1] - self.x[0]) * self.K0 * np.exp(-self.a * self.eqtheta) * (self.C_O[1, 0] + (self.dR/self.dO) * self.C_R[1, 0]))/((self.x[1] - self.x[0]) * self.K0 * (np.exp((1 - self.a) * self.eqtheta) + (self.dR/self.dO) * np.exp((-self.a) * self.eqtheta)) - 1)
+
+                self.C_O[0, 1] = (-self.C_O[1, 0] + (self.x[1] - self.x[0]) * self.K0 * np.exp((1 - self.a) * self.eqtheta) * (self.C_R[1, 0] + (self.dO/self.dR) * self.C_O[1, 0]))/((self.x[1] - self.x[0]) * self.K0 * (np.exp(-self.a * self.eqtheta) + (self.dO/self.dR) * np.exp((1 - self.a) * self.eqtheta)) - 1)
+            
+            oxidation = solver(reduced, [0, self.eqT], self.C_R[:,0], t_eval=[self.eqT], method='RK45')
+            self.C_R[1:-1, 1] = oxidation.y[1:-1, -1]
+        
+            reduction = solver(oxidised, [0, self.eqT], self.C_O[:,0], t_eval=[self.eqT], method='RK45')
+            self.C_O[1:-1, 1] = reduction.y[1:-1, -1]
+        else:
+            pass
+
+
         for k in range(1,self.m):
+            try:
+                self.offset = self.flux[-1] * self.Ru
+                #self.theta[k - 1] = self.theta[k - 1] - (self.F / (self.R * self.Temp)) * (self.offset)
+            except:
+                pass
+            
             '''Boundary conditions'''
             if self.Nernstian == True:
                 '''Nernstian'''
@@ -430,7 +461,8 @@ class Diffusive:
         -------------------
             
         '''
-        self.capacitance = cap.Capacitance(input = self.input, Cd = self.Cd, Ru = self.Ru)
+        self.fluxcapacitance = cap.Capacitance(input = self.input, Cd = self.Cd, Ru = self.Ru)
+        self.fluxnoise = noise.Noise(input = self.input, electrical = self.electrical, shot = self.shot, thermal = self.thermal)
         if self.input.type == 'pulse':
             if self.detailed == False:
                 self.flux = self.pulseflux - self.restflux
@@ -444,7 +476,9 @@ class Diffusive:
         -------------------
             
         '''
-        self.output = zip(self.tPLOT, self.EPLOT, self.capacitance.i + self.flux)
+        self.flux += self.fluxcapacitance.i
+        self.flux += self.fluxnoise.i
+        self.output = zip(self.tPLOT, self.EPLOT, self.flux)
         self.concentrations = zip(self.C_O, self.C_R)
     
 
@@ -497,7 +531,7 @@ if __name__ == '__main__':
     #shape = wf.NPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.05, rt = 0.15, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
     
     '''HYBRID'''
-    shape = wf.CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.001, detailed = True, sampled = True, alpha = 0.95)
+    shape = wf.CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.001, detailed = True, sampled = True, alpha = 0.05)
     #shape = wf.AC(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
     
 
