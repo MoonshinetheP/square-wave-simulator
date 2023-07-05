@@ -44,12 +44,12 @@ from scipy.stats import boltzmann
 
 class Noise:
     def __init__(self, input, electrical = False, shot = False, thermal = False):
+        
+        
         self.input = input
         self.electrical = electrical
         self.shot = shot
         self.thermal = thermal
-
-        self.t = self.input.tPLOT
 
         if self.electricalnoise == True:
             self.electrical()
@@ -60,7 +60,7 @@ class Noise:
         if self.thermalnoise == True:
             self.thermal()
         
-        #self.report(self, self.ie, self.ir, self.it)
+    
 
     def electricalnoise(self):
         self.i = (1E-6)*np.sin(2*np.pi*50*self.t)
