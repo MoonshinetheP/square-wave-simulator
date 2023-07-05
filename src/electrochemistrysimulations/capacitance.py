@@ -55,6 +55,7 @@ class Capacitance:
         if self.input.subtype == 'CSV':
             self.detailed() 
 
+
     def simple(self):
         '''Returns E vs. i for a CV performed on a capacitor with parameters derived from the Capacitance() class\n
         Uses equation 1.6.23 from the 3rd edition of Electrochemical Methods:\n
