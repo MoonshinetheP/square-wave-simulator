@@ -182,7 +182,7 @@ class step:
 
 class pulse:
     '''Parent class for all pulse type waveforms'''
-    def __init__(self, Eini, Efin, dEs, dEp, pt, rt, st, detailed):
+    def __init__(self, Eini, Efin, dEs, dEp, pt, rt, st, detailed, sampled, alpha):
 
         self.type = 'pulse'
 
@@ -195,6 +195,8 @@ class pulse:
         self.st = st            # Sampling period for more detailed waveforms
 
         self.detailed = detailed
+        self.sampled = sampled
+        self.alpha = alpha
                
         '''DATATYPE ERRORS'''
         if isinstance(self.Eini, (float, int)) is False:
@@ -675,8 +677,8 @@ class DPV(pulse):
     pt   - pulse time \n
     rt   - rest time \n
     st   - sampling time'''
-    def __init__(self, Eini, Efin, dEs, dEp, pt, rt, st, detailed):
-        super().__init__(Eini, Efin, dEs, dEp, pt, rt, st, detailed)
+    def __init__(self, Eini, Efin, dEs, dEp, pt, rt, st, detailed, sampled, alpha):
+        super().__init__(Eini, Efin, dEs, dEp, pt, rt, st, detailed, sampled, alpha)
 
         self.subtype = 'DPV'
 
@@ -1240,15 +1242,15 @@ if __name__ == '__main__':
     #wf = CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
     
     '''STEPS'''
-    wf = CA(dE = [0.5], dt = [1], st = 0.001)
+    #wf = CA(dE = [0.5], dt = [1], st = 0.001)
     
     '''PULSES'''
-    #wf = DPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.05, rt = 0.15, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
+    wf = DPV(Eini = 0, Efin = 0.25, dEs = 0.005, dEp = 0.05, pt = 0.2, rt = 0.4, st = 0.001, detailed = False, sampled = True, alpha = 0.25)
     #wf = SWV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.1, rt = 0.1, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
     #wf = NPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.05, rt = 0.15, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
     
     '''HYBRID'''
-    #wf = CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
+    #wf = CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.005, sr = 0.1, ns = 1, st = 0.0001, detailed = False, sampled = True, alpha = 0.25)
     #wf = AC(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
     
     '''5. DEFINE THE END TIME'''
