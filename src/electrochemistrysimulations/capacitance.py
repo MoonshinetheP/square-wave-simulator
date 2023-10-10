@@ -43,16 +43,16 @@ class Capacitance:
     '''Simulates the charging of a double layer when using CV or CSV \n 
     Also takes input parameters and uses them to create potential waveforms for CV and CSV'''
     
-    def __init__(self, input, Cd = 0.000050, Ru = 500):
+    def __init__(self, input, Cd = 0.000250, Ru = 500):
         '''Defines the parameters of the simulation, checks for errors, and makes a potential waveform to be used by other functions'''
 
         self.input = input
         self.Cd = Cd            # Double layer capacitance in F
         self.Ru = Ru            # Uncompensated resistance in Ohms
         
-        if self.input.subtype == 'CV':
+        if self.input.detailed == False:
             self.simple()
-        if self.input.subtype == 'CSV':
+        if self.input.detailed == True:
             self.detailed() 
 
 
@@ -183,6 +183,9 @@ class Capacitance:
         return self.output
 
 
+
+'''RUNNING THE SIMULATION FROM MAIN'''
+
 if __name__ == '__main__':
     
 
@@ -207,7 +210,7 @@ if __name__ == '__main__':
     '''SIMULATION'''
     start = time.time()
     
-    shape = wf.CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.001, detailed = True, sampled = True, alpha = 0.5)
+    shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
 
     instance = Capacitance(input = shape, Cd = 0.000050, Ru = 500)
     
@@ -216,7 +219,7 @@ if __name__ == '__main__':
 
 
     '''SAVE DATA'''
-    filepath = f'{cwd}/data/{shape.type} {shape.subtype}.txt'
+    filepath = f'{cwd}/data/{time.strftime("%Y-%m-%d %H-%M-%S")} {shape.subtype} capacitance.txt'
     with open(filepath, 'w') as file:
         for ix, iy, iz in instance.results():
             file.write(str(ix) + ',' + str(iy) + ',' + str(iz) + '\n')

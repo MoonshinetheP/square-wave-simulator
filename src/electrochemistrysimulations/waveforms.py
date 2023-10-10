@@ -45,6 +45,7 @@ class sweep:
     def __init__(self, Eini, Eupp, Elow, dE, sr, ns):
         
         self.type = 'sweep'
+        self.detailed = False
 
         self.Eini = Eini        # Start potential
         self.Eupp = Eupp        # Upper vertex potential
@@ -463,6 +464,7 @@ class LSV(sweep):
         super().__init__(Eini, Eupp, Elow, dE, sr, ns)
 
         self.subtype = 'LSV'
+        self.detailed = False
 
         if self.Elow < self.Eini < self.Eupp:
             print('\n' + 'Initial potential should be equal to either upper vertex or lower vertex potential in LSV' + '\n')
@@ -523,6 +525,7 @@ class CV(sweep):
         super().__init__(Eini, Eupp, Elow, dE, sr, ns)
 
         self.subtype = 'CV'
+        self.detailed = False
 
         '''STARTING FROM LOWER VERTEX POTENTIAL''' 
         if self.Eini == self.Elow:                
@@ -619,6 +622,7 @@ class CA(step):
         super().__init__(dE, dt, st)
 
         self.subtype = 'CA'
+        self.detailed = True
 
         '''SINGLE STEP CHRONOAMPEROMMETRY'''
         if self.multiple is False:
@@ -1255,10 +1259,10 @@ if __name__ == '__main__':
     
     '''5. DEFINE THE END TIME'''
     end = time.time()
-    print(f'The simulation took {end-start} seconds to complete')
+    print(f'The waveform took {end-start} seconds to generate')
 
     '''6. SAVE THE DATA'''
-    filepath = cwd + '/data/' + 'waveform.txt'
+    filepath = f'{cwd}/data/{time.strftime("%Y-%m-%d %H-%M-%S")} {wf.subtype} waveform.txt'
     with open(filepath, 'w') as file:
         for ix, iy, iz in wf.output():
             file.write(str(ix) + ',' + str(iy) + ',' + str(iz) + '\n')

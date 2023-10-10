@@ -16,21 +16,40 @@ Repository:         https://github.com/MoonshinetheP/electrochemistry-simulation
 Date of creation:   09/03/2023
 Main author:        Steven Linfield (MoonshinetheP)
 Collaborators:      None
-Acknowledgements:   Oliver Rodriguez (oliverrdz)
-    
+Acknowledgements:   Oliver Rodriguez (oliverrdz), Guy Denuault
+
 Filename:           simulations.py
 
 ===================================================================================================
+
+Description:
+
+This is the main simulation module of the electrochemistry-simulations package and can be used to 
+generate simulations of diffusion-based electrochemical reactions. The module uses the output of 
+the waveforms module to prepare a .txt file containing the time, potential, and current. 
+
+===================================================================================================
+
 How to use this file:
     
     1.  Scroll down to the section titled 'RUNNING THE SIMULATION FROM MAIN' (near the bottom)
     2.  Describe the waveform using the appropriate class from the waveforms (wf) module
-    3.  Define the parameters of the simulation in the E class
+    3.  Define the parameters of the simulation in the 'Diffusive' class
     4.  Run the file in Python
     
 The programme will attempt to make a new folder in the current working directory to keep all the 
 data. The name of this folder is /data by default, but this can be edited. If the /data folder 
 already exists, then this programme will save data into this folder.
+
+===================================================================================================
+
+Note:
+
+The code within this file is split into several sections. Each section starts with a title and a 
+brief description of what the code within it does. Comments are placed throughout the code, with 
+one hashtag (#) indicating a description of what the code below does and two hashtags (##) 
+indicating the formal definition of a variable.
+
 ===================================================================================================
 '''
 
@@ -54,174 +73,269 @@ from scipy.integrate import solve_ivp as solver
 
 '''SIMULATION CLASS'''
 class Diffusive:
-    """Simulation of an E mechanism using solving from scipy \n
-    E: R -> O + e"""
+    """Simulation of a diffusion-based electrochemical reaction through solving Fick's 2nd law of diffusion with an initial value problem solver from scipy"""
 
-    def __init__(self, input, E0, k0, a, cR, cO, DR, DO, eqE, eqt, Cd, Ru, Nernstian, BV, MH, electrical, shot, thermal, r, expansion):
+    def __init__(self, input, E0, k0, a, cR, cO, DR, DO, Cd, Ru, Nernstian, BV, MH, electrical, shot, thermal, r, expansion):
         '''
-        ------------------
+        -------------------------------------------------------------------------------------------
         WAVEFORM VARIABLES
-        ------------------
+        -------------------------------------------------------------------------------------------
+        
+        Several variables first need to be imported from the waveforms module through the input 
+        argument before they can be used in the simulation. Specific waveform types are defined 
+        here in order to differentiate between variables that are available in some waveforms, but 
+        not others. For sweeps, the detailed variable is set to False by default. For steps, the 
+        detailed variable is set to True by default. For all other waveforms, this variable is set 
+        according to the value entered in the waveform generation.
 
-        In this section, several variables are imported from the waveforms module through the input argument.
-        Specific waveform types are defined in order to differentiate between variables that are available in
-        some waveforms, but not others. For sweeps, the detailed variable is set to False by default. For steps,
-        the detailed variable is set to True by default. For all other waveforms, this variable is set according
-        to the value entered in the waveform generation.
+        -------------------------------------------------------------------------------------------
         '''
+        
+        # The actual waveform object passed into the simulation class
+        self.input = input
+        # Index (i.e. the list of data points) derived from the waveform object                                      
+        self.index = self.input.index                          
+        # Time for simulations derived from the waveform object
+        self.t = self.input.t                                   
+        # Potential for simulations derived from the waveform object
+        self.E = self.input.E
+        # Time for plotting simulation data                                   
+        self.tPLOT = self.input.tPLOT
+        # Potential for plotting simulation data                           
+        self.EPLOT = self.input.EPLOT                           
 
-        self.input = input                                      # The actual waveform object passed into the simulation class
-        self.index = self.input.index                           # Index (i.e. the list of data points) derived from the waveform object
-        self.t = self.input.t                                   # Time for simulations derived from the waveform object
-        self.E = self.input.E                                   # Potential for simulations derived from the waveform object
-        self.tPLOT = self.input.tPLOT                           # Time for plotting simulation data
-        self.EPLOT = self.input.EPLOT                           # Potential for plotting simulation data
 
-
+        # Variables associated with sweep type waveforms are imported
         if self.input.type == 'sweep':
-            self.Eini = self.input.Eini                         # Initial potential for a sweep waveform
-            self.Eupp = self.input.Eupp                         # Upper vertex potential for a sweep waveform (ignored in LSV if dE is negative)
-            self.Elow = self.input.Elow                         # Lower vertex potential for a sweep waveform (ignored in LSV if dE is positive)
-            self.dE = self.input.dE                             # Step potential for a sweep waveform (equates to number of data points)
-            self.sr = self.input.sr                             # Scan rate for a sweep waveform
-            self.ns = self.input.ns                             # Number of scans for a sweep waveform
+            ## Initial potential for a sweep waveform
+            self.Eini = self.input.Eini
+            ## Upper vertex potential for a sweep waveform (ignored in LSV if dE is negative)                        
+            self.Eupp = self.input.Eupp                         
+            ## Lower vertex potential for a sweep waveform (ignored in LSV if dE is positive) 
+            self.Elow = self.input.Elow                         
+            ## Step potential for a sweep waveform (equates to number of data points)
+            self.dE = self.input.dE
+            ## Scan rate for a sweep waveform
+            self.sr = self.input.sr                             
+            ## Number of scans for a sweep waveform
+            self.ns = self.input.ns                             
+            
+            ## Whether the waveform should be detailed or not (set to False for a sweep waveform)
+            self.detailed = self.input.detailed                               
 
-            self.detailed = False                               # Whether the waveform should be detailed or not (set to False for a sweep waveform)
 
-
+        # Variables associated with step type waveforms are imported
         if self.input.type == 'step':
-            self.dE = self.input.dE                             # Applied potential for a step waveform
-            self.dt = self.input.dt                             # Duration for which the potential is applied in a step waveform
+            ## Applied potential for a step waveform
+            self.dE = self.input.dE                             
+            ## Duration for which the potential is applied in a step waveform
+            self.dt = self.input.dt                             
+            
+            ## Whether the waveform should be detailed or not (set to True for a step waveform)
+            self.detailed = self.input.detailed                                
 
-            self.detailed = True                                # Whether the waveform should be detailed or not (set to True for a step waveform)
 
-
+        # Variables associated with pulse type waveforms are imported
         if self.input.type == 'pulse':
-            self.Eini = self.input.Eini                         # Initial potential for a pulse waveform
-            self.Efin = self.input.Efin                         # Final potential for a pulse waveform
-            self.dEs = self.input.dEs                           # Step potential for a pulse waveform
-            self.dEp = self.input.dEp                           # Pulse amplitude (not peak to peak) for a pulse waveform
-            self.pt = self.input.pt                             # Duration of the pulse in a pulse waveform
-            self.rt = self.input.rt                             # Duration of the rest period in a pulse waveform
-            self.st = self.input.st                             # Sampling time for a detailed pulse waveform (ignored if detailed == False)
+            ## Initial potential for a pulse waveform
+            self.Eini = self.input.Eini                         
+            ## Final potential for a pulse waveform
+            self.Efin = self.input.Efin                         
+            ## Step potential for a pulse waveform
+            self.dEs = self.input.dEs                           
+            ## Pulse amplitude (not peak to peak) for a pulse waveform
+            self.dEp = self.input.dEp                           
+            ## Duration of the pulse in a pulse waveform
+            self.pt = self.input.pt                             
+            ## Duration of the rest period in a pulse waveform
+            self.rt = self.input.rt                             
+            ## Sampling time for a detailed pulse waveform (ignored if detailed == False)
+            self.st = self.input.st                             
 
-            self.detailed = self.input.detailed                 # Whether the pulse waveform should be detailed or not
+            ## Whether the pulse waveform should be detailed or not
+            self.detailed = self.input.detailed                 
 
 
+        # Variables associated with hybrid type waveforms are imported
         if self.input.type == 'hybrid':
-            self.Eini = self.input.Eini                         # Initial potential for a hybrid waveform
-            self.Eupp = self.input.Eupp                         # Upper vertex potential for a hybrid waveform
-            self.Elow = self.input.Elow                         # Lower vertex potential for a hybrid waveform
-            self.dE = self.input.dE                             # Step potential for a hybrid waveform
-            self.sr = self.input.sr                             # Scan rate for a hybrid waveform
-            self.ns = self.input.ns                             # Number of scans for a hybrid waveform
-            self.st = self.input.st                             # Sampling time for a detailed hybrid waveform (ignored if detailed == False)
+            ## Initial potential for a hybrid waveform
+            self.Eini = self.input.Eini                         
+            ## Upper vertex potential for a hybrid waveform
+            self.Eupp = self.input.Eupp                         
+            ## Lower vertex potential for a hybrid waveform
+            self.Elow = self.input.Elow                         
+            ## Step potential for a hybrid waveform
+            self.dE = self.input.dE                             
+            ## Scan rate for a hybrid waveform
+            self.sr = self.input.sr                             
+            ## Number of scans for a hybrid waveform
+            self.ns = self.input.ns                             
+            ## Sampling time for a detailed hybrid waveform (ignored if detailed == False)
+            self.st = self.input.st                             
 
-            self.detailed = self.input.detailed                 # Whether the hybrid waveform should be detailed or not
+            ## Whether the hybrid waveform should be detailed or not
+            self.detailed = self.input.detailed                 
 
         
+
         '''
-        -------------------
+        -------------------------------------------------------------------------------------------
         MECHANISM VARIABLES
-        -------------------
-            
-        '''
-        self.E0 = E0                                            # Standard redox potential (in V)
-        self.k0 = k0                                            # 
-        self.a = a                                              # Transfer coefficient (no units)
-        self.cR = cR                                            # Concentration of the reduced species (in mol/cm^3)
-        self.cO = cO                                            # Concentration of the oxidised species (in mol/cm^3)
-        self.DR = DR                                            #
-        self.DO = DO                                            #
+        -------------------------------------------------------------------------------------------
 
-        self.F = 96485                                          # Faraday constant (in C/mol)
-        self.R = 8.314                                          # Ideal gas constant (in J/Kmol)
-        self.Temp = 298                                         # Standar temperature (in K)
+        Variables associated with the electrochemical reaction defined by the user in the instance
+        of the Diffusive class are imported. 
         
+        -------------------------------------------------------------------------------------------    
+        '''
         
+        ## Standard redox potential (in V)
+        self.E0 = E0                                            
+        ## Standard rate constant (in cm s^-1)
+        self.k0 = k0                                            
+        ## Transfer coefficient (no units)
+        self.a = a                                              
+        ## Concentration of the reduced species (in mol/cm^3)
+        self.cR = cR                                            
+        ## Concentration of the oxidised species (in mol/cm^3)
+        self.cO = cO                                            
+        ## Diffusion coefficient of the reduced species (in cm^2 s^-1)
+        self.DR = DR                                            
+        ## Diffusion coefficient of the reduced species (in cm^2 s^-1)
+        self.DO = DO                                            
 
+        ## Faraday constant (in C/mol)
+        self.F = 96485                                          
+        ## Ideal gas constant (in J/Kmol)
+        self.R = 8.314                                          
+        ## Standard temperature (in K)
+        self.Temp = 298                                         
+        
+    
 
         '''
-        -------------------
+        -------------------------------------------------------------------------------------------
         KINETIC MODELS
-        -------------------
-            
+        -------------------------------------------------------------------------------------------
+
+        The kinetic models which the user selected in the instance of the Diffusive class are 
+        counted and checked. Error messages are given if the user has selected no valid kinetic models or more than one 
+        valid kinetic model. 
+
+        ------------------------------------------------------------------------------------------- 
         '''
 
-        self.Nernstian = Nernstian                              #
-        self.BV = BV                                            #
-        self.MH = MH                                            #
+        ## Nersntian kinetics (True or False)
+        self.Nernstian = Nernstian            
+        ## Butler-Volmer kinetics (True or False)                  
+        self.BV = BV
+        ## Marcus-Hush kinetics (True or False)                                            
+        self.MH = MH
 
+        # Variable to hold the number of kinetic models which have been selected
         self.kinetics = 0
+        # Loops through the kinetic models and adds 1 to model counter if the model is True                              
         for ix in [self.Nernstian, self.BV, self.MH]:
             if ix == True:
                 self.kinetics += 1
 
+        # If no kinetic model is chosen, an error message is show and the simulation is cancelled
         if self.kinetics == 0:
             print('\n' + 'No kinetic model was chosen' + '\n')
             sys.exit()
 
+        # If more than one kinetic model is chosen, an error message is shown and the simulation is cancelled
         if self.kinetics >= 2:
             print('\n' + 'More than one kinetic model was chosen' + '\n')
             sys.exit()
 
 
+
         '''
-        -------------------
+        -------------------------------------------------------------------------------------------
         NOISE MODELS
-        -------------------
+        -------------------------------------------------------------------------------------------
         
+        In this section, the noise models which the user has selected are imported.
+
+        -------------------------------------------------------------------------------------------
         '''
+        
+        ## Electrical noise (True or False)
         self.electrical = electrical
+        ## Shot noise (True or False)
         self.shot = shot
+        ## Thermal noise (True or False)
         self.thermal = thermal
 
-        self.noise = 0
-        for ix in [self.electrical, self.shot, self.thermal]:
-            if ix == True:
-                self.noise += 1
 
 
         '''
-        -------------------
+        -------------------------------------------------------------------------------------------
         SPATIAL GRID VARIABLES
-        -------------------
-            
+        -------------------------------------------------------------------------------------------
+        
+        In this section, the variables associated with the spatial coordinates are imported.    
+        
+        -------------------------------------------------------------------------------------------
         '''
-        self.r = r                                              #
-        self.expansion = expansion                              #
+        
+        # Electrode radius (in cm)
+        self.r = r 
+        # Expansion factor of the spatial grid                                             
+        self.expansion = expansion                              
+
 
         
         '''
-        -------------------
+        -------------------------------------------------------------------------------------------
         DIMENSIONLESS VARIABLES
-        -------------------
-            
+        -------------------------------------------------------------------------------------------
+
+        The variables imported above can be redefined as dimensionless variables.  
+
+        -------------------------------------------------------------------------------------------  
         '''
-        concentrations = np.array([self.cR, self.cO])           #
-        self.cmax = np.amax(concentrations)                     #
-        self.CR = self.cR / self.cmax                           #
-        self.CO = self.cO / self.cmax                           #
+        
+        # The concentration of each species is contained in an array
+        concentrations = np.array([self.cR, self.cO])
+        ## Maximum concentration in the concentration array
+        self.cmax = np.amax(concentrations)
+        ## Dimensionless concentration of the reduced species
+        self.CR = self.cR / self.cmax
+        ## Dimensionless concentration of the oxidised species
+        self.CO = self.cO / self.cmax
 
-        diffusions = np.array([self.DR, self.DO])               #
-        self.Dmax = np.amax(diffusions)                         #
+        # The diffusion coefficient of each species is contained in an array
+        diffusions = np.array([self.DR, self.DO])
+        ## Maximum diffusion coefficient in the diffusion coefficient array
+        self.Dmax = np.amax(diffusions)
+        ## Dimensionless diffusion coefficient of the reduced species
+        self.dR = self.DR / self.Dmax
+        ## Dimensionless diffusion coefficient of the oxidised species
+        self.dO = self.DO / self.Dmax
+        ## Dimensionless maximum diffusion coefficient (i.e. 1)
+        self.d = self.Dmax / self.Dmax
 
-        self.dR = self.DR / self.Dmax                           #
-        self.dO = self.DO / self.Dmax                           #
-        self.d = self.Dmax / self.Dmax                          #
+        ## Dimensionless time
+        self.T = (self.Dmax * self.t) / (self.r ** 2)
+        ## Dimensionless time step
+        self.dT = np.diff(self.T)
 
-        self.T = (self.Dmax * self.t) / (self.r ** 2)           # Dimensionless time
-        self.dT = np.diff(self.T)                               #
-
+        # 
         if self.input.type == 'pulse':
+            #
             self.pT = np.array([])
+            #
             self.rT = np.array([])
+            #
             for ix in range (0, self.dT.size):
                 if ix % 2 == 0:
                     self.pT = np.append(self.pT, self.dT[ix])
                 else:
                     self.rT = np.append(self.rT, self.dT[ix])
         
+        # 
         if self.detailed == False:
             if self.input.type == 'sweep' or self.input.type == 'hybrid':
                 self.sT = np.array([])
@@ -245,68 +359,108 @@ class Diffusive:
                 self.rsT = np.empty((self.rT.size, self.input.rp))
                 for iy in range(0, self.rT.size):
                     self.rsT[iy,:] = np.arange(0, np.amin(self.rT), (self.Dmax * self.st) / (self.r ** 2))
-
+            
+            #
             if self.input.type == 'hybrid':
+                #
                 self.sT = np.array([])
+                #
                 self.sT = np.append(self.sT, np.arange(0, np.amin(self.dT), (self.Dmax * self.st) / (self.r ** 2)))
+                #
                 if self.sT[-1] > self.dT[1]:
+                    #
                     self.sT = self.sT[:-1]
         
-        self.Tmax = self.T[-1]                                  #
+        # Maximum dimensionless time
+        self.Tmax = self.T[-1]
         
+        ## Maximum dimensionless distance 
+        self.Xmax = 6 * np.sqrt(self.d * self.Tmax)
 
-        self.Xmax = 6 * np.sqrt(self.d * self.Tmax)             #
-
+        # Dimensionless potential
         self.theta = (self.F / (self.R * self.Temp)) * (self.E - self.E0)
 
-        self.K0 = (self.k0 * self.r) / self.Dmax                #
+        # Dimensionless standard rate constant
+        self.K0 = (self.k0 * self.r) / self.Dmax
+        
+        
         
         '''
-        -------------------
+        -------------------------------------------------------------------------------------------
         CELL CHARACTERISTICS
-        -------------------
+        -------------------------------------------------------------------------------------------
         
+        In this section, variables representing the characteristics of the cell are imported. The
+        double layer capacitance and the uncompensated resistance are later used to calculate the
+        capacative contribution to an analogue response.
+
+        -------------------------------------------------------------------------------------------
         '''      
         
-        self.Cd = Cd
-        self.Ru = Ru
+        ## Double layer capacitance (in F)
+        self.Cd = Cd                                            
+        ## Uncompensated resistance (in Ohms)
+        self.Ru = Ru                                            
+
+
 
         '''
-        -------------------
+        -------------------------------------------------------------------------------------------
         EXPANDING SPATIAL GRID
-        -------------------
-            
+        -------------------------------------------------------------------------------------------
+
+        The spatial grid is an array of distances between which the change in concentration is 
+        calculated. The finer the grid, the more continuous the calculation, but at the expense of
+        computation time. To save on computation time, an expansion factor can be introduced which
+        increases the distance between subsequent points, allowing for a finer grid at the 
+        electrode surface and a coarse grid in the bulk solution. If the expansion factor is set to
+        1, then there is no expansion.
+         
+        -------------------------------------------------------------------------------------------    
         '''                
-        self.dX = np.sqrt(2.05 * self.dT[0])                    #
-        self.x = np.array([0])                                  #
+        
+        # For the sake of stability, dT divided by dX squared must be less than 0.5. Since dT is dictated by the waveform, dX is calculated as below to achieve this stability criteria
+        self.dX = np.sqrt(2.05 * self.dT[0])
+        # The first distance in the array is 0 (i.e. the electrode surface)
+        self.x = np.array([0])
+        # Whilst the final element of the array is below the maximum distance, another point is added
         while self.x[-1] < self.Xmax:
             self.x = np.append(self.x, self.x[-1] + self.dX)
             self.dX *= self.expansion
         
 
+
         '''
-        -------------------
+        -------------------------------------------------------------------------------------------
         DIFFUSION MATRICES
-        -------------------
+        -------------------------------------------------------------------------------------------
             
+        Fick's 2nd law is discretised
+
+        -------------------------------------------------------------------------------------------
         '''
-        self.n = int(self.x.size)                               # 
-        self.m = int(self.theta.size)                           #
 
-        self.C_R = np.ones((self.n, self.m)) * self.CR          #
-        self.C_O = np.ones((self.n, self.m)) * self.CO          #
+        ## Number of points in the spatial grid
+        self.n = int(self.x.size)
+        ## Number of points in the dimensionless potential waveform                               
+        self.m = int(self.theta.size)                           
 
-        self.alpha_R = np.ones(self.n - 1)                      #
-        self.beta_R = np.ones(self.n)                           #
-        self.gamma_R = np.ones(self.n - 1)                      #
+        # A matrix of bulk concentrations with dimensions of n x m are prepared for both the reduced and oxidised species
+        self.C_R = np.ones((self.n, self.m)) * self.CR          
+        self.C_O = np.ones((self.n, self.m)) * self.CO
+
+        # An array of ones are generated for the coefficients of the expanded Fick's 2nd law
+        self.alpha_R = np.ones(self.n - 1)
+        self.beta_R = np.ones(self.n)
+        self.gamma_R = np.ones(self.n - 1)
         
-        self.alpha_O = np.ones(self.n - 1)                      #
-        self.beta_O = np.ones(self.n)                           #
-        self.gamma_O = np.ones(self.n - 1)                      #    
+        self.alpha_O = np.ones(self.n - 1)
+        self.beta_O = np.ones(self.n)
+        self.gamma_O = np.ones(self.n - 1)
           
         for ix in range(1, self.n - 1):
-            self.xplus = self.x[ix + 1] - self.x[ix]            #
-            self.xminus = self.x[ix] - self.x[ix - 1]           #
+            self.xplus = self.x[ix + 1] - self.x[ix]
+            self.xminus = self.x[ix] - self.x[ix - 1]
             self.denominator = self.xminus * (self.xplus ** 2) + self.xplus * (self.xminus **2)
             
             self.alpha_R[ix - 1] *= 2 * self.dR * self.xplus / self.denominator
@@ -333,22 +487,43 @@ class Diffusive:
         def oxidised(t,y):
             return np.dot(O,y)
 
-        '''
-        -------------------
-        CONTAINERS
-        -------------------
-            
-        '''
-        self.flux = np.array([])
-        self.pulseflux = np.array([])
-        self.restflux = np.array([])
+
 
         '''
-        -------------------
-        MAIN LOOP
-        -------------------
+        -------------------------------------------------------------------------------------------
+        CONTAINERS
+        -------------------------------------------------------------------------------------------
             
+        Before running the main simulation loop, several containers are made to contain the results
+        of the simulation
+
+        -------------------------------------------------------------------------------------------
         '''
+        
+        # Flux calculated during sweep, step, and hybrid type waveforms
+        self.flux = np.array([])
+        # Flux calculated during the pulse period of a pulse type waveform
+        self.pulseflux = np.array([])
+        # Flux calculated during the rest period of a pulse type waveform
+        self.restflux = np.array([])
+
+
+
+        '''
+        -------------------------------------------------------------------------------------------
+        MAIN LOOP
+        -------------------------------------------------------------------------------------------
+            
+        Here is the main part of the simulation, where Fick's 2nd law is solved. For each point in 
+        the dimensionless potential waveform, the boundary condition of the selected kinetic model 
+        is used to calculate the concentration of each species at the electrode surface. Then, an
+        initial values problem solver is used to update each point in the concentration matrix 
+        using the diffusion matrix. Finally, the flux between the first two grid points is used to
+        calculate the flux of species towards the electrode, which is recalculated into current.
+
+        -------------------------------------------------------------------------------------------
+        '''
+        
         for k in range(1,self.m):
             '''Boundary conditions'''
             if self.Nernstian == True:
@@ -423,36 +598,52 @@ class Diffusive:
                         self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cR * self.DR) * ((np.average(self.C_Rdet[0, self.input.sp - round(self.input.sp * (1 - self.input.alpha)):]) - self.C_R[0, k]) / (self.x[1] - self.x[0])) - (self.F * np.pi * self.r * self.cO * self.DO) * ((np.average(self.C_Odet[0, self.input.sp - round(self.input.sp * (1 - self.input.alpha)):]) - self.C_O[0, k]) / (self.x[1] - self.x[0])))
        
         
+
         '''
-        -------------------
+        -------------------------------------------------------------------------------------------
         POST SIMULATION CALCULATIONS
-        -------------------
+        -------------------------------------------------------------------------------------------
             
+        After the main loop, any other operations that need to be performed are done so here. For
+        example, the capacitance is calculated using the same input as the simulation, but to
+        simplify the simulation space, the calculation is done in a separate module. Also the pulse
+        signal is calculated by subtracting the rest flux from the pulse flux.
+
+        -------------------------------------------------------------------------------------------
         '''
-        self.fluxcapacitance = cap.Capacitance(input = self.input, Cd = self.Cd, Ru = self.Ru)
-        if self.input.type == 'pulse':
-            if self.detailed == False:
-                self.flux = self.pulseflux - self.restflux
+        #self.fluxcapacitance = cap.Capacitance(input = self.input, Cd = self.Cd, Ru = self.Ru)
+        #if self.input.type == 'pulse':
+        #    if self.detailed == False:
+        #        self.flux = self.pulseflux - self.restflux
             
-            else:
-                pass
+        #    else:
+        #        pass
         
+
+
         '''
-        -------------------
+        -------------------------------------------------------------------------------------------
         OUTPUTS
-        -------------------
-            
+        -------------------------------------------------------------------------------------------
+
+
+
+        -------------------------------------------------------------------------------------------    
         '''
-        self.flux += self.fluxcapacitance.i
+        #self.flux += self.fluxcapacitance.i
         self.output = zip(self.tPLOT, self.EPLOT, self.flux)
         self.concentrations = zip(self.C_O, self.C_R)
     
 
+
     '''
-    -------------------
+    -----------------------------------------------------------------------------------------------
     CLASS FUNCTIONS
-    -------------------
+    -----------------------------------------------------------------------------------------------
             
+    
+
+    -----------------------------------------------------------------------------------------------
     '''
     def results(self):
         return self.output
@@ -486,13 +677,13 @@ if __name__ == '__main__':
     '''3. DESCRIBE THE WAVEFORM'''
     '''Sweeps'''
     #shape = wf.LSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
-    shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
+    #shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
     
     '''STEPS'''
     #shape = wf.CA(dE = [0.5], dt = [1], st = 0.001)
     
     '''PULSES'''
-    #shape = wf.DPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.05, rt = 0.15, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
+    shape = wf.DPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.05, rt = 0.15, st = 0.001, detailed = False, sampled = True, alpha = 0.25)
     #shape = wf.SWV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.1, rt = 0.1, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
     #shape = wf.NPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.05, rt = 0.15, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
     
@@ -502,7 +693,7 @@ if __name__ == '__main__':
     
 
     '''4. RUN THE SIMULATION'''
-    instance = Diffusive(input = shape, E0 = 0.25, k0 = 0.001, a = 0.5, cR = 0.000005, cO = 0.000000, DR = 5E-6, DO = 5E-6, eqE = 0, eqt = 0, Cd = 0.000020, Ru = 250, Nernstian = False, BV = True, MH = False, electrical = False, shot = False, thermal = False, r = 0.1, expansion = 1.05)
+    instance = Diffusive(input = shape, E0 = 0.25, k0 = 0.1, a = 0.5, cR = 0.000005, cO = 0.000000, DR = 5E-6, DO = 5E-6, Cd = 0.000020, Ru = 250, Nernstian = False, BV = True, MH = False, electrical = False, shot = False, thermal = False, r = 0.1, expansion = 1.05)
     
     '''5. DEFINE THE END TIME'''
     end = time.time()

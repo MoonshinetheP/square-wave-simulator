@@ -68,13 +68,13 @@ if __name__ == '__main__':
     
     '''Sweeps'''
     #shape = wf.LSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
-    shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
+    #shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
     
     '''STEPS'''
     #shape = wf.CA(dE = [0.5], dt = [1], st = 0.001)
     
     '''PULSES'''
-    #shape = wf.DPV(Eini = 0, Efin = 0.5, dEs = 0.001, dEp = 0.01, pt = 0.05, rt = 0.15, st = 0.001, detailed = True, sampled = False, alpha = 0.25)
+    shape = wf.DPV(Eini = 0, Efin = 0.5, dEs = 0.001, dEp = 0.01, pt = 0.05, rt = 0.15, st = 0.001, detailed = False, sampled = False, alpha = 0.25)
     #shape = wf.SWV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.1, rt = 0.1, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
     #shape = wf.NPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.05, rt = 0.15, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
     
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     #shape = wf.CSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.0025, sr = 0.1, ns = 1, st = 0.0001, detailed = True, sampled = True, alpha = 0.05)
     #shape = wf.AC(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
 
-    instance = sim.Diffusive(input = shape, E0 = 0.25, k0 = 0.1, a = 0.5, cR = 0.000005, cO = 0.000000, DR = 5E-6, DO = 5E-6, eqE = 0, eqt = 0, Cd = 0.000001, Ru = 100, Nernstian = False, BV = True, MH = False, electrical = True, shot = False, thermal = False, r = 0.1, expansion = 1.01)
+    instance = sim.Diffusive(input = shape, E0 = 0.25, k0 = 0.1, a = 0.5, cR = 0.000005, cO = 0.000000, DR = 5E-6, DO = 5E-6, Cd = 0.000001, Ru = 100, Nernstian = False, BV = True, MH = False, electrical = False, shot = False, thermal = False, r = 0.1, expansion = 1.01)
 
     end = time.time()
     print(f'The simulation took {end-start} seconds to complete')
