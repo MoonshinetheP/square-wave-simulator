@@ -65,6 +65,7 @@ import numpy as np
 import waveforms as wf
 import capacitance as cap
 import noise as noise
+import plot as plt
 
 from errno import EEXIST
 from scipy.sparse import diags as diagonals
@@ -630,7 +631,7 @@ class Diffusive:
 
         -------------------------------------------------------------------------------------------    
         '''
-        #self.flux += self.fluxcapacitance.i
+        self.i = self.flux
         self.output = zip(self.tPLOT, self.EPLOT, self.flux)
         self.concentrations = zip(self.C_O, self.C_R)
     
@@ -677,7 +678,7 @@ if __name__ == '__main__':
     '''3. DESCRIBE THE WAVEFORM'''
     '''Sweeps'''
     #shape = wf.LSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
-    #shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
+    shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
     
     '''STEPS'''
     #shape = wf.CA(dE = [0.5], dt = [1], st = 0.001)
@@ -685,15 +686,17 @@ if __name__ == '__main__':
     '''PULSES'''
     #shape = wf.DPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.05, rt = 0.15, st = 0.001, detailed = True, sampled = False, alpha = 0.5)
     #shape = wf.SWV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.1, rt = 0.1, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
-    #shape = wf.NPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.05, rt = 0.15, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
+    #shape = wf.NPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.05, rt = 0.15, st = 0.001, detailed = False, sampled = True, alpha = 0.25)
     
     '''HYBRID'''
-    shape = wf.CSV(Eini = -0.4, Eupp = 0.05, Elow = -0.4, dE = 0.002, sr = 0.5, ns = 1, st = 0.0001, detailed = True, sampled = True, alpha = 0.1)
+    #shape = wf.CSV(Eini = -0.4, Eupp = 0.05, Elow = -0.4, dE = 0.002, sr = 0.5, ns = 1, st = 0.0001, detailed = True, sampled = True, alpha = 0.1)
     #shape = wf.AC(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
     
 
     '''4. RUN THE SIMULATION'''
-    instance = Diffusive(input = shape, E0 = -0.2, k0 = 0.1, a = 0.5, cR = 0.0000003517, cO = 0.000000, DR = 7.27E-06, DO = 7.27E-06, Cd = 0.000020, Ru = 250, Nernstian = False, BV = True, MH = False, electrical = False, shot = False, thermal = False, r = 0.15, expansion = 1.05)
+    instance = Diffusive(input = shape, E0 = 0.25, k0 = 0.1, a = 0.5, cR = 0.005, cO = 0.000000, DR = 5E-06, DO = 5E-06, Cd = 0.000020, Ru = 250, Nernstian = False, BV = True, MH = False, electrical = False, shot = False, thermal = False, r = 0.15, expansion = 1.05)
+    
+    plt.Plotter(shape, instance, display = True, animate = True, save = False)
     
     '''5. DEFINE THE END TIME'''
     end = time.time()

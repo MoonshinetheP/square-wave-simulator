@@ -849,8 +849,8 @@ class NPV(pulse):
     sr   - scan rate \n
     ns   - number of scans \n
     st   - sampling time'''
-    def __init__(self, Eini, Efin, dEs, dEp, pt, rt, st, detailed):
-        super().__init__(Eini, Efin, dEs, dEp, pt, rt, st, detailed)
+    def __init__(self, Eini, Efin, dEs, dEp, pt, rt, st, detailed, sampled, alpha):
+        super().__init__(Eini, Efin, dEs, dEp, pt, rt, st, detailed, sampled, alpha)
 
         self.subtype = 'NPV'
 
