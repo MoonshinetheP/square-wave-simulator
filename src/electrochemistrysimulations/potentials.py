@@ -460,26 +460,17 @@ class Diffusive:
         self.gamma_O = np.ones(self.n - 1)
           
         for ix in range(1, self.n - 1):
-
-            try: 
-                self.xplus = self.x[ix + 1] - self.x[ix]
-            except: pass
+            self.xplus = self.x[ix + 1] - self.x[ix]
             self.xminus = self.x[ix] - self.x[ix - 1]
-            self.denominator = 1 / (self.xminus * (self.xplus ** 2) + self.xplus * (self.xminus **2)) # why not dT[0] work?
+            self.denominator = self.xminus * (self.xplus ** 2) + self.xplus * (self.xminus **2)
             
-            self.alpha_R[ix - 1] *= 2 * self.dR * self.xplus * self.denominator
-            self.beta_R[ix] *= 1 - (2 * self.dR * (self.xminus + self.xplus) * self.denominator)
-            try:
-                self.gamma_R[ix] *= 2 * self.dR * self.xminus * self.denominator
-            except: pass
-
-            self.alpha_O[ix - 1] *= 2 * self.dO * self.xplus * self.denominator
-            self.beta_O[ix] *= 1 - (2 * self.dO * (self.xminus + self.xplus) * self.denominator)
-            try:
-                self.gamma_O[ix] *= 2 * self.dO * self.xminus * self.denominator
-            except: pass
-        #probably can make diagonal not square and pop in a  initial term - need to think
+            self.alpha_R[ix - 1] *= 2 * self.dR * self.xplus / self.denominator
+            self.beta_R[ix] *= -2 * self.dR * (self.xminus + self.xplus) / self.denominator
+            self.gamma_R[ix] *= 2 * self.dR * self.xminus / self.denominator
             
+            self.alpha_O[ix - 1] *= 2 * self.dO * self.xplus / self.denominator
+            self.beta_O[ix] *= -2 * self.dO * (self.xminus + self.xplus) / self.denominator
+            self.gamma_O[ix] *= 2 * self.dO * self.xminus / self.denominator
         
             
 
@@ -544,10 +535,10 @@ class Diffusive:
             
             if self.BV == True:
                 '''Butler-Volmer'''
-                self.C_R[0, k] = (self.C_R[1, k - 1] + self.x[1] * self.K0 * np.exp(-self.a * self.theta[k - 1]) * (self.C_O[1, k - 1] + (self.dR/self.dO) * self.C_R[1, k - 1]))/(self.x[1] * self.K0 * (np.exp((1 - self.a) * self.theta[k - 1]) + (self.dR/self.dO) * np.exp((-self.a) * self.theta[k - 1])) + 1)
+                self.C_R[0, k] = (-self.C_R[1, k - 1] + (self.x[1] - self.x[0]) * self.K0 * np.exp(-self.a * self.theta[k - 1]) * (self.C_O[1, k - 1] + (self.dR/self.dO) * self.C_R[1, k - 1]))/((self.x[1] - self.x[0]) * self.K0 * (np.exp((1 - self.a) * self.theta[k - 1]) + (self.dR/self.dO) * np.exp((-self.a) * self.theta[k - 1])) - 1)
 
-                self.C_O[0, k] = (self.dR/self.dO) * (self.C_R[1, k] - self.C_R[0, k])
-
+                self.C_O[0, k] = (-self.C_O[1, k - 1] + (self.x[1] - self.x[0]) * self.K0 * np.exp((1 - self.a) * self.theta[k - 1]) * (self.C_R[1, k - 1] + (self.dO/self.dR) * self.C_O[1, k - 1]))/((self.x[1] - self.x[0]) * self.K0 * (np.exp(-self.a * self.theta[k - 1]) + (self.dO/self.dR) * np.exp((1 - self.a) * self.theta[k - 1])) - 1)
+           
             if self.input.type == 'sweep' or self.input.type == 'hybrid':
                 oxidation = solver(reduced, [0, self.dT[k - 1]], self.C_R[:,k - 1], t_eval=self.sT, method='RK45')
                 self.C_R[1:-1, k] = oxidation.y[1:-1, -1]
@@ -893,8 +884,8 @@ if __name__ == '__main__':
 
     '''3. DESCRIBE THE WAVEFORM'''
     '''Sweeps'''
-    #shape = wf.LSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
-    shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
+    shape = wf.LSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
+    #shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
     
     '''STEPS'''
     #shape = wf.CA(dE = [0.5], dt = [1], st = 0.001)
@@ -910,10 +901,10 @@ if __name__ == '__main__':
     
 
     '''4. RUN THE SIMULATION'''
-    instance = Diffusive(input = shape, E0 = 0.25, k0 = 0.001, a = 0.5, cR = 0.005, cO = 0.000000, DR = 5E-06, DO = 5E-06, Cd = 0.000020, Ru = 250, Nernstian = False, BV = True, MH = False, electrical = False, shot = False, thermal = False, r = 0.15, expansion = 1.05)
-    #instance = Adsorbed(input = shape, E0 = 0.25, k0 = 1, a = 0.5, SC = 10E-10, Nernstian = True, BV = False, r = 0.15)
-
-    plt.Plotter(shape, instance, display = True, animate = False, save = False)
+    instance = Diffusive(input = shape, E0 = 0.25, k0 = 0.1, a = 0.5, cR = 0.005, cO = 0.000000, DR = 5E-06, DO = 5E-06, Cd = 0.000020, Ru = 250, Nernstian = False, BV = True, MH = False, electrical = False, shot = False, thermal = False, r = 0.15, expansion = 1.05)
+    #instance = Adsorbed(input = shape, E0 = 0.25, k0 = 1, a = 0.5, SC = 10E-10, Nernstian = False, BV = True, r = 0.15)
+    
+    plt.Plotter(shape, instance, display = True, animate = True, save = False)
     
     '''5. DEFINE THE END TIME'''
     end = time.time()
