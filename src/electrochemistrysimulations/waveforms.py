@@ -657,6 +657,7 @@ class CA(step):
                 self.tPLOT = np.append(self.tPLOT, np.arange(self.t[ix], self.t[ix + 1], self.st))
             except:
                 pass
+        self.EPLOT = np.ones((self.tPLOT.size)) * self.dE
 
         '''EXPORTED WAVEFORM'''
         self.indexWF = np.arange(0, self.tPLOT.size, 1)

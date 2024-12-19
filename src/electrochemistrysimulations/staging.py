@@ -60,23 +60,23 @@ indicating the formal definition of a variable.
 import sys
 import os
 import time
-
 import numpy as np
 import waveforms as wf
-import capacitance as cap
-import noise as noise
 import plot as plt
 
+from mechanism import E, C, Reactions
+from matrices import Matrices
+from solver import Solver
+
 from errno import EEXIST
-from scipy.sparse import diags as diagonals
-from scipy.integrate import solve_ivp as solver
+
 
 
 '''SIMULATION CLASS'''
 class Diffusive:
     """Simulation of a diffusion-based electrochemical reaction through solving Fick's 2nd law of diffusion with an initial value problem solver from scipy"""
 
-    def __init__(self, input, E0, k0, a, cR, cO, DR, DO, Cd, Ru, Nernstian, BV, MH, electrical, shot, thermal, r, expansion):
+    def __init__(self, input, mechanism, Nernstian, BV, MH, r, expansion):
 
         
         # The actual waveform object passed into the simulation class
@@ -92,47 +92,7 @@ class Diffusive:
         # Potential for plotting simulation data                           
         self.EPLOT = self.input.EPLOT                           
 
-
-        # Variables associated with sweep type waveforms are imported
-        if self.input.type == 'sweep':
-            ## Initial potential for a sweep waveform
-            self.Eini = self.input.Eini
-            ## Upper vertex potential for a sweep waveform (ignored in LSV if dE is negative)                        
-            self.Eupp = self.input.Eupp                         
-            ## Lower vertex potential for a sweep waveform (ignored in LSV if dE is positive) 
-            self.Elow = self.input.Elow                         
-            ## Step potential for a sweep waveform (equates to number of data points)
-            self.dE = self.input.dE
-            ## Scan rate for a sweep waveform
-            self.sr = self.input.sr                             
-            ## Number of scans for a sweep waveform
-            self.ns = self.input.ns                             
-            
-            ## Whether the waveform should be detailed or not (set to False for a sweep waveform)
-            self.detailed = self.input.detailed                               
-
-
-            
-
-        
-
-
-        
-        ## Standard redox potential (in V)
-        self.E0 = E0                                            
-        ## Standard rate constant (in cm s^-1)
-        self.k0 = k0                                            
-        ## Transfer coefficient (no units)
-        self.a = a                                              
-        ## Concentration of the reduced species (in mol/cm^3)
-        self.cR = cR                                            
-        ## Concentration of the oxidised species (in mol/cm^3)
-        self.cO = cO                                            
-        ## Diffusion coefficient of the reduced species (in cm^2 s^-1)
-        self.DR = DR                                            
-        ## Diffusion coefficient of the reduced species (in cm^2 s^-1)
-        self.DO = DO                                            
-
+        self.mechanism = mechanism
         ## Faraday constant (in C/mol)
         self.F = 96485                                          
         ## Ideal gas constant (in J/Kmol)
@@ -167,61 +127,21 @@ class Diffusive:
             sys.exit()
 
 
-
-
-        
-        ## Electrical noise (True or False)
-        self.electrical = electrical
-        ## Shot noise (True or False)
-        self.shot = shot
-        ## Thermal noise (True or False)
-        self.thermal = thermal
-
-
-
-
-        
         # Electrode radius (in cm)
         self.r = r 
         # Expansion factor of the spatial grid                                             
         self.expansion = expansion                              
 
 
- 
-        # The concentration of each species is contained in an array
-        concentrations = np.array([self.cR, self.cO])
-        ## Maximum concentration in the concentration array
-        self.cmax = np.amax(concentrations)
-        ## Dimensionless concentration of the reduced species
-        self.CR = self.cR / self.cmax
-        ## Dimensionless concentration of the oxidised species
-        self.CO = self.cO / self.cmax
-
-        # The diffusion coefficient of each species is contained in an array
-        diffusions = np.array([self.DR, self.DO])
-        ## Maximum diffusion coefficient in the diffusion coefficient array
-        self.Dmax = np.amax(diffusions)
-        ## Dimensionless diffusion coefficient of the reduced species
-        self.dR = self.DR / self.Dmax
-        ## Dimensionless diffusion coefficient of the oxidised species
-        self.dO = self.DO / self.Dmax
-        ## Dimensionless maximum diffusion coefficient (i.e. 1)
-        self.d = self.Dmax / self.Dmax
-
+        self.Dmax = self.mechanism.Dmax
+        self.d = self.Dmax/self.Dmax
         ## Dimensionless time
         self.T = (self.Dmax * self.t) / (self.r ** 2)
         ## Dimensionless time step
         self.dT = np.diff(self.T)
-
-        # 
-
+        self.sT = np.array(())
+        self.sT = np.append(self.sT, np.amin(self.dT))
         
-        # 
-        if self.detailed == False:
-            if self.input.type == 'sweep' or self.input.type == 'hybrid':
-                self.sT = np.array([])
-                self.sT = np.append(self.sT, np.amin(self.dT))
-            
   
    
         
@@ -232,16 +152,36 @@ class Diffusive:
         self.Xmax = 6 * np.sqrt(self.d * self.Tmax)
 
         # Dimensionless potential
-        self.theta = (self.F / (self.R * self.Temp)) * (self.E - self.E0)
+        for ix in self.mechanism.markers:
+            if len(ix['Oxidised']) != 0:
+                self.E0 = ix['Oxidised'][1]
+                self.theta = (self.F / (self.R * self.Temp)) * (self.E - self.E0)
+                ix['Oxidised'][1] = self.theta
+                
+                self.k0 = ix['Oxidised'][2]
+                self.K0 = (self.k0 * self.r) / self.Dmax 
+                ix['Oxidised'][2] = self.K0
 
+            if len(ix['Reduced']) != 0:
+                self.E0 = ix['Reduced'][1]
+                self.theta = (self.F / (self.R * self.Temp)) * (self.E - self.E0)
+                ix['Reduced'][1] = self.theta
+
+                self.k0 = ix['Reduced'][2]
+                self.K0 = (self.k0 * self.r) / self.Dmax 
+                ix['Reduced'][2] = self.K0
+
+            if len(ix['Consumed']) != 0:
+                self.k1 = ix['Consumed'][1]
+                self.K1 = (self.k1 * (self.r**2)) / self.Dmax 
+                ix['Consumed'][1] = self.K1
+
+            if len(ix['Produced']) != 0:
+                self.k1 = ix['Produced'][1]
+                self.K1 = (self.k1 * (self.r**2)) / self.Dmax 
+                ix['Produced'][1] = self.K1
         # Dimensionless standard rate constant
-        self.K0 = (self.k0 * self.r) / self.Dmax
-
-        
-        ## Double layer capacitance (in F)
-        self.Cd = Cd                                            
-        ## Uncompensated resistance (in Ohms)
-        self.Ru = Ru                                            
+                                  
 
 
 
@@ -259,62 +199,11 @@ class Diffusive:
         ## Number of points in the spatial grid
         self.n = int(self.x.size)
         ## Number of points in the dimensionless potential waveform                               
-        self.m = int(self.theta.size)                           
+        self.m = int(self.E.size)                           
 
         # A matrix of bulk concentrations with dimensions of n x m are prepared for both the reduced and oxidised species
-        self.C_R = np.ones((self.n, self.m)) * self.CR          
-        self.C_O = np.ones((self.n, self.m)) * self.CO
-
-        # An array of ones are generated for the coefficients of the expanded Fick's 2nd law
-        self.alpha_R = np.ones(self.n -1)
-        self.beta_R = np.ones(self.n)
-        self.gamma_R = np.ones(self.n - 1)
-        
-        self.alpha_O = np.ones(self.n - 1)
-        self.beta_O = np.ones(self.n)
-        self.gamma_O = np.ones(self.n - 1)
-          
-        for ix in range(1, self.n):
-
-            try: 
-                self.xplus = self.x[ix + 1] - self.x[ix]
-            except: pass
-            self.xminus = self.x[ix] - self.x[ix - 1]
-            self.denominator = 1 / (self.xminus * (self.xplus ** 2) + self.xplus * (self.xminus **2)) # why not dT[0] work?
-            
-            self.alpha_R[ix - 1] *= 2 * self.dR * self.xplus * self.denominator
-            self.beta_R[ix] *= 1 - (2 * self.dR * (self.xminus + self.xplus) * self.denominator)
-            try:
-                self.gamma_R[ix] *= 2 * self.dR * self.xminus * self.denominator
-            except: pass
-
-            self.alpha_O[ix - 1] *= 2 * self.dO * self.xplus * self.denominator
-            self.beta_O[ix] *= 1 - (2 * self.dO * (self.xminus + self.xplus) * self.denominator)
-            try:
-                self.gamma_O[ix] *= 2 * self.dO * self.xminus * self.denominator
-            except: pass
-        #probably can make diagonal not square and pop in a  initial term - need to think
-            
-
-        R = diagonals([self.alpha_R, self.beta_R, self.gamma_R], [-1,0,1]).toarray()
-        R[0,:] = np.zeros(self.n)        
-        R[-1,:] = np.zeros(self.n)
-        R[0,0] = self.CR
-        R[-1,-1] = self.CR    
-        
-        O = diagonals([self.alpha_O, self.beta_O, self.gamma_O], [-1,0,1]).toarray()
-        O[0,:] = np.zeros(self.n)
-        O[-1,:] = np.zeros(self.n)
-        O[0,0] = self.CO   
-        O[-1,-1] = self.CO
-
-        def reduced(t,y):
-            return np.dot(R,y)
-        
-        def oxidised(t,y):
-            return np.dot(O,y)
-
-
+        matrices = Matrices(geometry = '1D', spatial = (self.x,), coordinates = (self.n,self.m), mechanism = self.mechanism)
+        #for now spatial and coordinates are user entered, need a geometry making class to automate
         
         # Flux calculated during sweep, step, and hybrid type waveforms
         self.flux = np.array([])
@@ -322,25 +211,17 @@ class Diffusive:
 
 
         for k in range(1,self.m):
-
-            if self.BV == True:
-                '''Butler-Volmer'''
-                self.C_R[0, k] = (self.C_R[1, k - 1] + self.x[1] * self.K0 * np.exp(-self.a * self.theta[k - 1]) * (self.C_O[1, k - 1] + (self.dR/self.dO) * self.C_R[1, k - 1]))/(self.x[1] * self.K0 * (np.exp((1 - self.a) * self.theta[k - 1]) + (self.dR/self.dO) * np.exp((-self.a) * self.theta[k - 1])) + 1)
-
-                self.C_O[0, k] = (self.dR/self.dO) * (self.C_R[1, k] - self.C_R[0, k])
-           
-            if self.input.type == 'sweep' or self.input.type == 'hybrid':
-                oxidation = solver(reduced, [0, self.dT[k - 1]], self.C_R[:,k - 1], t_eval=self.sT, method='Radau')
-                self.C_R[1:-1, k] = oxidation.y[1:-1, -1]
-
-                reduction = solver(oxidised, [0, self.dT[k - 1]], self.C_O[:,k - 1], t_eval=self.sT, method='Radau')
-                self.C_O[1:-1, k] = reduction.y[1:-1, -1]
-
- 
-            
-            if self.input.type == 'sweep':
-                self.flux = np.append(self.flux, (self.F * np.pi * self.r * self.cR * self.DR) * ((self.C_R[1, k] - self.C_R[0, k]) / (self.x[1] - self.x[0]))- (self.F * np.pi * self.r * self.cO * self.DO) * ((self.C_O[1, k] - self.C_O[0, k]) / (self.x[1] - self.x[0])))
-
+            self.thisflux = np.array([])
+            if k == 300:
+                pass
+            for ix in self.mechanism.markers:
+                solved = Solver(k, (self.dT,self.sT), ix, self.mechanism.markers, '1 Dimensional', (self.x,), self.kinetics)
+                pass
+                if len(ix['Oxidised']) != 0:
+                    self.thisflux = np.append(self.thisflux, (self.F * np.pi * self.r * ix['Concentration'] * (ix['Concentration array'][1, k] - ix['Concentration array'][0, k]) / (self.x[1] - self.x[0])))
+                if len(ix['Reduced']) != 0:
+                    self.thisflux = np.append(self.thisflux, (-self.F * np.pi * self.r * ix['Concentration'] * (ix['Concentration array'][1, k] - ix['Concentration array'][0, k]) / (self.x[1] - self.x[0])))#need to do for dO and DR
+            self.flux = np.append(self.flux, np.sum(self.thisflux)) 
 
         self.i = self.flux
 
@@ -359,14 +240,22 @@ if __name__ == '__main__':
     start = time.time()
 
 
-    shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
+    shape = wf.CV(Eini = 0.0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
     
+    E1 = E((['G'], ['H']), ([1],[1]), ([3],[2]), ([0.000005],[0]), ([5E-6],[5E-6]), E0 = 0.25, k0 = 0.5, a = 0.5)
+    E2 = E((['H'], ['I']), ([1],[1]), ([2],[1]), ([0.00000],[0]), ([5E-6],[5E-6]), E0 = 0.4, k0 = 0.1, a = 0.5)
+    C1 = C((['H'], ['G']), ([1],[1]), ([2],[3]), ([0.00000],[0.00000]), ([5E-6],[5E-6]), k1 = 0.000002)
+    E3 = E((['T'], ['RE']), ([1],[1]), ([2],[3]), ([0.00000],[0]), ([5E-6],[5E-6]), E0 = 0.4, k0 = 0.1, a = 0.5)
 
     '''4. RUN THE SIMULATION'''
-    instance = Diffusive(input = shape, E0 = 0.25, k0 = 0.001, a = 0.5, cR = 0.005, cO = 0.000000, DR = 5E-06, DO = 5E-06, Cd = 0.000020, Ru = 250, Nernstian = False, BV = True, MH = False, electrical = False, shot = False, thermal = False, r = 0.15, expansion = 1.02)
+    instance = Diffusive(input = shape, mechanism = Reactions(E1, E2), Nernstian = False, BV = True, MH = False, r = 0.15, expansion = 1.05)
 
-    plt.Plotter(shape, instance, display = True, animate = False, save = False)
+    plt.Plotter(shape, instance, display = True, save = True)
     
+    filepath = os.getcwd() + '/data/sonata.txt'
+    with open(filepath, 'w') as file:
+        for ix, iy in zip(instance.E, instance.i):
+            file.write(str(ix) + ',' + str(iy) + '\n')
     '''5. DEFINE THE END TIME'''
     end = time.time()
     print(end-start)

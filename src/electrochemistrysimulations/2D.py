@@ -125,58 +125,6 @@ class Diffusive:
             self.detailed = self.input.detailed                               
 
 
-        # Variables associated with step type waveforms are imported
-        if self.input.type == 'step':
-            ## Applied potential for a step waveform
-            self.dE = self.input.dE                             
-            ## Duration for which the potential is applied in a step waveform
-            self.dt = self.input.dt                             
-            
-            ## Whether the waveform should be detailed or not (set to True for a step waveform)
-            self.detailed = self.input.detailed                                
-
-
-        # Variables associated with pulse type waveforms are imported
-        if self.input.type == 'pulse':
-            ## Initial potential for a pulse waveform
-            self.Eini = self.input.Eini                         
-            ## Final potential for a pulse waveform
-            self.Efin = self.input.Efin                         
-            ## Step potential for a pulse waveform
-            self.dEs = self.input.dEs                           
-            ## Pulse amplitude (not peak to peak) for a pulse waveform
-            self.dEp = self.input.dEp                           
-            ## Duration of the pulse in a pulse waveform
-            self.pt = self.input.pt                             
-            ## Duration of the rest period in a pulse waveform
-            self.rt = self.input.rt                             
-            ## Sampling time for a detailed pulse waveform (ignored if detailed == False)
-            self.st = self.input.st                             
-
-            ## Whether the pulse waveform should be detailed or not
-            self.detailed = self.input.detailed                 
-
-
-        # Variables associated with hybrid type waveforms are imported
-        if self.input.type == 'hybrid':
-            ## Initial potential for a hybrid waveform
-            self.Eini = self.input.Eini                         
-            ## Upper vertex potential for a hybrid waveform
-            self.Eupp = self.input.Eupp                         
-            ## Lower vertex potential for a hybrid waveform
-            self.Elow = self.input.Elow                         
-            ## Step potential for a hybrid waveform
-            self.dE = self.input.dE                             
-            ## Scan rate for a hybrid waveform
-            self.sr = self.input.sr                             
-            ## Number of scans for a hybrid waveform
-            self.ns = self.input.ns                             
-            ## Sampling time for a detailed hybrid waveform (ignored if detailed == False)
-            self.st = self.input.st                             
-
-            ## Whether the hybrid waveform should be detailed or not
-            self.detailed = self.input.detailed                 
-
         
 
         '''
@@ -212,63 +160,6 @@ class Diffusive:
         ## Standard temperature (in K)
         self.Temp = 298                                         
         
-    
-
-        '''
-        -------------------------------------------------------------------------------------------
-        KINETIC MODELS
-        -------------------------------------------------------------------------------------------
-
-        The kinetic models which the user selected in the instance of the Diffusive class are 
-        counted and checked. Error messages are given if the user has selected no valid kinetic models or more than one 
-        valid kinetic model. 
-
-        ------------------------------------------------------------------------------------------- 
-        '''
-
-        ## Nersntian kinetics (True or False)
-        self.Nernstian = Nernstian            
-        ## Butler-Volmer kinetics (True or False)                  
-        self.BV = BV
-        ## Marcus-Hush kinetics (True or False)                                            
-        self.MH = MH
-
-        # Variable to hold the number of kinetic models which have been selected
-        self.kinetics = 0
-        # Loops through the kinetic models and adds 1 to model counter if the model is True                              
-        for ix in [self.Nernstian, self.BV, self.MH]:
-            if ix == True:
-                self.kinetics += 1
-
-        # If no kinetic model is chosen, an error message is show and the simulation is cancelled
-        if self.kinetics == 0:
-            print('\n' + 'No kinetic model was chosen' + '\n')
-            sys.exit()
-
-        # If more than one kinetic model is chosen, an error message is shown and the simulation is cancelled
-        if self.kinetics >= 2:
-            print('\n' + 'More than one kinetic model was chosen' + '\n')
-            sys.exit()
-
-
-
-        '''
-        -------------------------------------------------------------------------------------------
-        NOISE MODELS
-        -------------------------------------------------------------------------------------------
-        
-        In this section, the noise models which the user has selected are imported.
-
-        -------------------------------------------------------------------------------------------
-        '''
-        
-        ## Electrical noise (True or False)
-        self.electrical = electrical
-        ## Shot noise (True or False)
-        self.shot = shot
-        ## Thermal noise (True or False)
-        self.thermal = thermal
-
 
 
         '''
@@ -323,55 +214,13 @@ class Diffusive:
         ## Dimensionless time step
         self.dT = np.diff(self.T)
 
-        # 
-        if self.input.type == 'pulse':
-            #
-            self.pT = np.array([])
-            #
-            self.rT = np.array([])
-            #
-            for ix in range (0, self.dT.size):
-                if ix % 2 == 0:
-                    self.pT = np.append(self.pT, self.dT[ix])
-                else:
-                    self.rT = np.append(self.rT, self.dT[ix])
-        
+       
         # 
         if self.detailed == False:
             if self.input.type == 'sweep' or self.input.type == 'hybrid':
                 self.sT = np.array([])
                 self.sT = np.append(self.sT, np.amin(self.dT))
-            
-            if self.input.type == 'pulse':
-                self.psT = np.empty((self.pT.size, 1))
-                for ix in range(0, self.pT.size):
-                    self.psT[ix,:] = np.amin(self.pT)
-                
-                self.rsT = np.empty((self.rT.size, 1))
-                for iy in range(0, self.rT.size):
-                    self.rsT[iy,:] = np.amin(self.rT)
-                
-        else:
-            if self.input.type == 'pulse':
-                self.psT = np.empty((self.pT.size, self.input.pp))
-                for ix in range(0, self.pT.size):
-                    self.psT[ix,:] = np.arange(0, np.amin(self.pT), (self.Dmax * self.st) / (self.r ** 2))
-                
-                self.rsT = np.empty((self.rT.size, self.input.rp))
-                for iy in range(0, self.rT.size):
-                    self.rsT[iy,:] = np.arange(0, np.amin(self.rT), (self.Dmax * self.st) / (self.r ** 2))
-            
-            #
-            if self.input.type == 'hybrid':
-                #
-                self.sT = np.array([])
-                #
-                self.sT = np.append(self.sT, np.arange(0, np.amin(self.dT), (self.Dmax * self.st) / (self.r ** 2)))
-                #
-                if self.sT[-1] > self.dT[1]:
-                    #
-                    self.sT = self.sT[:-1]
-        
+
         # Maximum dimensionless time
         self.Tmax = self.T[-1]
         
@@ -420,35 +269,50 @@ class Diffusive:
         -------------------------------------------------------------------------------------------    
         '''                
         
-        # For the sake of stability, dT divided by dX squared must be less than 0.5. Since dT is dictated by the waveform, dX is calculated as below to achieve this stability criteria
-        self.dX = np.sqrt(2.05 * self.dT[0])
-        # The first distance in the array is 0 (i.e. the electrode surface)
-        self.x = np.array([0])
-        # Whilst the final element of the array is below the maximum distance, another point is added
-        while self.x[-1] < self.Xmax:
-            self.x = np.append(self.x, self.x[-1] + self.dX)
-            self.dX *= self.expansion
-        
+
+        self.Re = self.r/self.r
+
+        # Maximum dimensionless distance
+        self.Zmax = 6 * np.sqrt(self.T[-1])
+        self.Rmax = self.Re + 6 * np.sqrt(self.T[-1])
 
 
-        '''
-        -------------------------------------------------------------------------------------------
-        DIFFUSION MATRICES
-        -------------------------------------------------------------------------------------------
-            
-        Fick's 2nd law is discretised
+        '''SPATIAL GRID'''
+                # For the sake of stability, dT divided by dX squared must be less than 0.5. Since dT is dictated by the waveform, dX is calculated as below to achieve this stability criteria
+        self.h = np.sqrt(2.05 * self.dT[0])
+                # The first distance in the array is 0 (i.e. the electrode surface)
+        self.R = np.array([0], dtype = np.float64)
+                # Whilst the final element of the array is below the maximum distance, another point is added
 
-        -------------------------------------------------------------------------------------------
-        '''
 
-        ## Number of points in the spatial grid
-        self.n = int(self.x.size)
-        ## Number of points in the dimensionless potential waveform                               
-        self.m = int(self.theta.size)                           
+        self.h = np.sqrt(2.05 * self.dT[0])
+        while self.R[-1] < self.Re / 2:
+                self.R = np.append(self.R, self.R[-1] + self.h)
+                self.h *= self.expansion
+        while self.R[-1] < self.Re:
+                self.R = np.append(self.R, self.R[-1] + self.h)
+                self.h = self.h/self.expansion
+        self.Rep = self.R.size
+        while self.R[-1] < self.Rmax:
+                self.R = np.append(self.R, self.R[-1] + self.h)
+                self.h *= self.expansion
 
-        # A matrix of bulk concentrations with dimensions of n x m are prepared for both the reduced and oxidised species
-        self.C_R = np.ones((self.n, self.m)) * self.CR          
-        self.C_O = np.ones((self.n, self.m)) * self.CO
+        self.h = np.sqrt(2.05 * self.dT[0])
+        self.Z = np.array([0], dtype = np.float64)
+
+        while self.Z[-1] < self.Zmax:
+            self.Z = np.append(self.Z, self.Z[-1] + self.h)
+            self.h *= self.expansion
+
+
+        self.l = int(self.R.size)        ## Number of points in the spatial grid
+        self.n = int(self.Z.size)        ## Number of points in the spatial grid
+        self.m = int(self.theta.size)        ## Number of points in the dimensionless potential waveform
+
+
+        self.C_R = np.ones((self.l, self.n, self.m)) * self.CR 
+        # A matrix of bulk concentrations with dimensions of n x m are prepared for both the reduced and oxidised species 
+        self.C_O = np.ones((self.l, self.n, self.m)) * self.CO
 
         # An array of ones are generated for the coefficients of the expanded Fick's 2nd law
         self.alpha_R = np.ones(self.n - 1)
@@ -460,7 +324,6 @@ class Diffusive:
         self.gamma_O = np.ones(self.n - 1)
           
         for ix in range(1, self.n - 1):
-
             try: 
                 self.xplus = self.x[ix + 1] - self.x[ix]
             except: pass
@@ -533,7 +396,10 @@ class Diffusive:
 
         -------------------------------------------------------------------------------------------
         '''
-        
+        for i,j,k in itertools.product(range(1, l-1), range(1, n-1), range(1, m-1)):
+            C_R[0:Rep, 0, k] = 1/(1 + np.exp(theta[k-1]))
+            C_R[i, j, k] = C_R[i, j, k-1] + dT[0]*((2/(R[i+1] - R[i-1]))*((C_R[i+1, j, k-1] - C_R[i, j, k-1])/(R[i+1] - R[i]) + (C_R[i, j, k-1] - C_R[i-1, j, k-1])/(R[i] - R[i-1])) + (1/R[i])*(C_R[i+1, j, k-1] - C_R[i-1, j, k-1])/(R[i+1] - R[i-1]) + (2/(Z[j+1] - Z[j-1]))*((C_R[i, j+1, k-1] - C_R[i, j, k-1])/(Z[j+1] - Z[j]) + (C_R[i, j, k-1] - C_R[i, j-1, k-1])/(Z[j] - Z[j-1])))
+            
         for k in range(1,self.m):
             '''Boundary conditions'''
             if self.Nernstian == True:
@@ -893,14 +759,14 @@ if __name__ == '__main__':
 
     '''3. DESCRIBE THE WAVEFORM'''
     '''Sweeps'''
-    shape = wf.LSV(Eini = 0.5, Eupp = 0.5, Elow = 0, dE = -0.001, sr = 0.1, ns = 1)
-    #shape = wf.CV(Eini = 0.5, Eupp = 0.5, Elow = 0, dE = -0.001, sr = 0.1, ns = 1)
+    #shape = wf.LSV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
+    shape = wf.CV(Eini = 0, Eupp = 0.5, Elow = 0, dE = 0.001, sr = 0.1, ns = 1)
     
     '''STEPS'''
-    #shape = wf.CA(dE = [0], dt = [10], st = 0.001)
+    #shape = wf.CA(dE = [0.5], dt = [1], st = 0.001)
     
     '''PULSES'''
-    #shape = wf.DPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.05, rt = 0.15, st = 0.001, detailed = False, sampled = False, alpha = 0.5)
+    #shape = wf.DPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.05, rt = 0.15, st = 0.001, detailed = True, sampled = False, alpha = 0.5)
     #shape = wf.SWV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.1, rt = 0.1, st = 0.001, detailed = True, sampled = True, alpha = 0.25)
     #shape = wf.NPV(Eini = 0, Efin = 0.5, dEs = 0.005, dEp = 0.02, pt = 0.05, rt = 0.15, st = 0.001, detailed = False, sampled = True, alpha = 0.25)
     
@@ -910,13 +776,10 @@ if __name__ == '__main__':
     
 
     '''4. RUN THE SIMULATION'''
-    #instance = Diffusive(input = shape, E0 = 0.25, k0 = 0.1, a = 0.5, cR = 0.00, cO = 0.0000005, DR = 5E-06, DO = 5E-06, Cd = 0.000020, Ru = 250, Nernstian = False, BV = True, MH = False, electrical = False, shot = False, thermal = False, r = 0.15, expansion = 1.05)
-    instance = Adsorbed(input = shape, E0 = 0.25, k0 = 1, a = 0.5, SC = 10E-10, Nernstian = True, BV = False, r = 0.15)
+    instance = Diffusive(input = shape, E0 = 0.2, k0 = 0.1, a = 0.5, cR = 0.005, cO = 0.000000, DR = 5E-06, DO = 5E-06, Cd = 0.000020, Ru = 250, Nernstian = False, BV = True, MH = False, electrical = False, shot = False, thermal = False, r = 0.15, expansion = 1.05)
+    #instance = Adsorbed(input = shape, E0 = 0.25, k0 = 1, a = 0.5, SC = 10E-10, Nernstian = True, BV = False, r = 0.15)
 
-    #fig, axes = plt.subplot_mosaic((['A','B'],['C','C'],['D', 'D']), figsize=(12, 15))        # defines a matplotlib figure with two horizontally arranged subplots
-    #left, = axes['A'].plot(shape.tWF, shape.EWF, linewidth = 1, linestyle = '-', color = 'blue', marker = None, label = None, visible = True)       # plots the potential waveform from waveforms.py on the left-hand subplot
-    #right, = axes['B'].plot(instance.E, instance.i, linewidth = 1, linestyle = '-', color = 'red', marker = None, label = None, visible = True)     # plots the oscilloscope data from operations.py on the right-hand subplot
-     
+    plt.Plotter(shape, instance, display = True, animate = False, save = False)
     
     '''5. DEFINE THE END TIME'''
     end = time.time()
